@@ -1,0 +1,240 @@
+scalar DateTime
+
+enum UserRole {
+  agent
+  manager
+}
+
+enum ContactStatus {
+  new
+  contacted
+  interested
+  follow_up
+  converted
+  lost
+}
+
+enum InteractionType {
+  call
+  whatsapp
+  sms
+  meeting
+  property_viewing
+  physical_visit
+}
+
+enum FollowUpStatus {
+  pending
+  completed
+  overdue
+}
+
+enum SharePermission {
+  view
+  report
+  edit
+}
+
+type NotificationSettings {
+  emailAlerts: Boolean!
+  followUpReminders: Boolean!
+  weeklyDigest: Boolean!
+  sharedListUpdates: Boolean!
+}
+
+type User {
+  id: ID!
+  fullName: String!
+  email: String!
+  role: UserRole!
+  profileImage: String
+  notificationSettings: NotificationSettings!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type AuthPayload {
+  user: User!
+  accessToken: String!
+  refreshToken: String!
+}
+
+type TokenPayload {
+  accessToken: String!
+  refreshToken: String!
+}
+
+type Contact {
+  id: ID!
+  ownerId: ID!
+  fullName: String!
+  phone: String!
+  email: String!
+  propertyInterest: String!
+  budgetRange: String!
+  preferredLocation: String!
+  leadSource: String!
+  notes: String!
+  status: ContactStatus!
+  lastInteractionDate: DateTime
+  nextFollowUpDate: DateTime
+  isConverted: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Interaction {
+  id: ID!
+  contactId: ID!
+  ownerId: ID!
+  interactionType: InteractionType!
+  notes: String!
+  outcome: String!
+  nextFollowUpDate: DateTime
+  createdAt: DateTime!
+}
+
+type FollowUp {
+  id: ID!
+  ownerId: ID!
+  contactId: ID!
+  scheduledDate: DateTime!
+  status: FollowUpStatus!
+  notes: String!
+  completedAt: DateTime
+  createdAt: DateTime!
+}
+
+type SharedAccess {
+  id: ID!
+  contactId: ID!
+  ownerId: ID!
+  sharedUserId: ID!
+  permission: SharePermission!
+  sharedUser: User
+  contact: Contact
+  createdAt: DateTime!
+}
+
+type DailyReport {
+  date: DateTime!
+  contactsAdded: Int!
+  interactionsCompleted: Int!
+  convertedClients: Int!
+  followUpsCompleted: Int!
+}
+
+type MonthlyReport {
+  month: String!
+  year: Int!
+  totalContacts: Int!
+  totalInteractions: Int!
+  conversionPercentage: Float!
+  activeFollowUps: Int!
+}
+
+type ConversionRateReport {
+  rate: Float!
+  converted: Int!
+  total: Int!
+  periodStart: DateTime!
+  periodEnd: DateTime!
+}
+
+input RegisterInput {
+  fullName: String!
+  email: String!
+  password: String!
+  role: UserRole
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input ContactInput {
+  fullName: String!
+  phone: String
+  email: String
+  propertyInterest: String
+  budgetRange: String
+  preferredLocation: String
+  leadSource: String
+  notes: String
+  status: ContactStatus
+  nextFollowUpDate: DateTime
+}
+
+input ContactUpdateInput {
+  fullName: String
+  phone: String
+  email: String
+  propertyInterest: String
+  budgetRange: String
+  preferredLocation: String
+  leadSource: String
+  notes: String
+  status: ContactStatus
+  nextFollowUpDate: DateTime
+}
+
+input InteractionInput {
+  contactId: ID!
+  interactionType: InteractionType!
+  notes: String
+  outcome: String
+  nextFollowUpDate: DateTime
+}
+
+input InteractionUpdateInput {
+  interactionType: InteractionType
+  notes: String
+  outcome: String
+  nextFollowUpDate: DateTime
+}
+
+input FollowUpInput {
+  contactId: ID!
+  scheduledDate: DateTime!
+  notes: String
+}
+
+input ShareInput {
+  contactId: ID!
+  sharedUserId: ID!
+  permission: SharePermission!
+}
+
+type Query {
+  me: User
+  myContacts: [Contact!]!
+  contact(id: ID!): Contact
+  sharedContacts: [Contact!]!
+  interactions(contactId: ID): [Interaction!]!
+  interactionHistory(contactId: ID!): [Interaction!]!
+  todayFollowUps: [FollowUp!]!
+  overdueFollowUps: [FollowUp!]!
+  upcomingFollowUps(days: Int): [FollowUp!]!
+  dailyReport(date: DateTime): DailyReport!
+  monthlyReport(year: Int, month: Int): MonthlyReport!
+  conversionRate(from: DateTime, to: DateTime): ConversionRateReport!
+  sharedUsers: [SharedAccess!]!
+}
+
+type Mutation {
+  register(input: RegisterInput!): AuthPayload!
+  login(input: LoginInput!): AuthPayload!
+  refreshToken(refreshToken: String!): TokenPayload!
+  createContact(input: ContactInput!): Contact!
+  updateContact(id: ID!, input: ContactUpdateInput!): Contact!
+  deleteContact(id: ID!): Boolean!
+  shareContact(contactId: ID!, sharedUserId: ID!, permission: SharePermission!): SharedAccess!
+  logInteraction(input: InteractionInput!): Interaction!
+  updateInteraction(id: ID!, input: InteractionUpdateInput!): Interaction!
+  createFollowUp(input: FollowUpInput!): FollowUp!
+  completeFollowUp(id: ID!): FollowUp!
+  rescheduleFollowUp(id: ID!, scheduledDate: DateTime!): FollowUp!
+  grantAccess(input: ShareInput!): SharedAccess!
+  revokeAccess(contactId: ID!, sharedUserId: ID!): Boolean!
+}
