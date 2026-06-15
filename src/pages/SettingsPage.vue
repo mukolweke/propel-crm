@@ -1,0 +1,182 @@
+<script setup lang="ts">
+import { onMounted, reactive } from 'vue'
+import { useSettingsStore } from '@/stores/settingsStore'
+import BaseButton from '@/components/ui/BaseButton.vue'
+import BaseCard from '@/components/ui/BaseCard.vue'
+import BaseInput from '@/components/ui/BaseInput.vue'
+import BaseSelect from '@/components/ui/BaseSelect.vue'
+import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
+import {
+  BellAlertIcon,
+  ShieldCheckIcon,
+  CircleStackIcon,
+  InformationCircleIcon,
+  BuildingOffice2Icon,
+  ChevronRightIcon,
+} from '@heroicons/vue/24/outline'
+
+const settingsStore = useSettingsStore()
+
+const passwordForm = reactive({
+  current: '',
+  newPassword: '',
+  confirm: '',
+})
+
+const profile = reactive({
+  firstName: 'Alexander',
+  lastName: 'Sterling',
+  email: 'alex.sterling@propelcrm.com',
+})
+
+onMounted(() => {
+  settingsStore.fetchSettings()
+  const parts = settingsStore.settings.profile.name.split(' ')
+  profile.firstName = parts[0] ?? 'Alexander'
+  profile.lastName = parts.slice(1).join(' ') || 'Sterling'
+  profile.email = settingsStore.settings.profile.email
+})
+
+async function saveAll() {
+  await settingsStore.saveProfile({
+    ...settingsStore.settings.profile,
+    name: `${profile.firstName} ${profile.lastName}`.trim(),
+    email: profile.email,
+  })
+}
+
+async function changePassword() {
+  if (passwordForm.newPassword !== passwordForm.confirm) return
+  await settingsStore.changePassword(passwordForm.current, passwordForm.newPassword)
+  passwordForm.current = ''
+  passwordForm.newPassword = ''
+  passwordForm.confirm = ''
+}
+</script>
+
+<template>
+  <div class="space-y-8">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h1 class="font-display text-3xl text-slate-900">Account Settings</h1>
+        <p class="mt-2 text-sm text-slate-500">Manage your profile information and platform preferences.</p>
+      </div>
+      <BaseButton :loading="settingsStore.saving" @click="saveAll">Save Changes</BaseButton>
+    </div>
+
+    <SkeletonLoader v-if="settingsStore.loading" :rows="6" />
+
+    <template v-else>
+      <div class="grid gap-6 lg:grid-cols-2">
+        <BaseCard>
+          <h2 class="mb-5 font-display text-lg text-slate-900">Public Profile</h2>
+          <div class="mb-6 flex items-center gap-4">
+            <div class="flex h-16 w-16 items-center justify-center rounded-xl bg-brand-100 text-xl font-semibold text-brand-800">
+              AS
+            </div>
+            <div>
+              <p class="font-medium text-slate-900">Public Profile</p>
+              <p class="text-sm text-slate-500">Update your photo and personal details</p>
+              <button class="mt-1 text-sm font-medium text-brand-600">Remove photo</button>
+            </div>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <BaseInput v-model="profile.firstName" label="First Name" variant="filled" />
+            <BaseInput v-model="profile.lastName" label="Last Name" variant="filled" />
+            <BaseInput v-model="profile.email" label="Email Address" type="email" variant="filled" />
+            <BaseInput v-model="settingsStore.settings.profile.phone" label="Phone" variant="filled" />
+            <BaseInput v-model="settingsStore.settings.profile.agency" label="Agency" variant="filled" />
+          </div>
+        </BaseCard>
+
+        <BaseCard>
+          <div class="mb-5 flex items-center gap-2">
+            <BellAlertIcon class="h-5 w-5 text-brand-700" />
+            <h2 class="font-display text-lg text-slate-900">Notifications</h2>
+          </div>
+          <div class="space-y-4">
+            <label class="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-4">
+              <div>
+                <p class="text-sm font-medium text-slate-900">New Lead Alerts</p>
+                <p class="text-xs text-slate-500">Immediate mobile push</p>
+              </div>
+              <input v-model="settingsStore.settings.notifications.emailAlerts" type="checkbox" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+            </label>
+            <label class="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-4">
+              <div>
+                <p class="text-sm font-medium text-slate-900">Daily Digest</p>
+                <p class="text-xs text-slate-500">Morning email summary</p>
+              </div>
+              <input v-model="settingsStore.settings.notifications.weeklyDigest" type="checkbox" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+            </label>
+            <label class="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-4">
+              <div>
+                <p class="text-sm font-medium text-slate-900">Contract Signings</p>
+                <p class="text-xs text-slate-500">SMS notifications</p>
+              </div>
+              <input v-model="settingsStore.settings.notifications.followUpReminders" type="checkbox" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+            </label>
+          </div>
+        </BaseCard>
+
+        <BaseCard>
+          <div class="mb-5 flex items-center gap-2">
+            <ShieldCheckIcon class="h-5 w-5 text-brand-700" />
+            <h2 class="font-display text-lg text-slate-900">Security</h2>
+          </div>
+          <div class="grid gap-4">
+            <BaseInput v-model="passwordForm.current" label="Current Password" type="password" variant="filled" />
+            <BaseInput v-model="passwordForm.newPassword" label="New Password" type="password" variant="filled" />
+            <BaseInput v-model="passwordForm.confirm" label="Confirm New" type="password" variant="filled" />
+          </div>
+          <p class="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
+            <InformationCircleIcon class="h-4 w-4" />
+            Minimum 12 characters with symbols.
+          </p>
+          <BaseButton class="mt-4" variant="secondary" :loading="settingsStore.saving" @click="changePassword">
+            Update Password
+          </BaseButton>
+        </BaseCard>
+
+        <BaseCard>
+          <div class="mb-5 flex items-center gap-2">
+            <CircleStackIcon class="h-5 w-5 text-brand-700" />
+            <h2 class="font-display text-lg text-slate-900">Export Preferences</h2>
+          </div>
+          <BaseSelect
+            v-model="settingsStore.settings.exportSettings.defaultFormat"
+            label="Default Export Format"
+            :options="[
+              { value: 'csv', label: 'CSV Spreadsheet (.csv)' },
+              { value: 'excel', label: 'Excel Workbook (.xlsx)' },
+              { value: 'pdf', label: 'PDF Document (.pdf)' },
+            ]"
+            variant="filled"
+          />
+          <div class="mt-5 rounded-xl border border-slate-200 bg-mint p-4">
+            <p class="text-sm font-medium text-slate-900">Request Full Backup</p>
+            <p class="mt-1 text-xs text-slate-500">Download all contact and deal history</p>
+            <BaseButton class="mt-3" variant="outline" size="sm">Request</BaseButton>
+          </div>
+        </BaseCard>
+
+        <BaseCard class="sm:col-span-2">
+          <div class="mb-5 flex items-center gap-2">
+            <BuildingOffice2Icon class="h-5 w-5 text-brand-700" />
+            <h2 class="font-display text-lg text-slate-900">CRM Configuration</h2>
+          </div>
+          <router-link
+            to="/settings/property-types"
+            class="flex items-center justify-between rounded-xl border border-slate-200 bg-mint px-4 py-4 transition-colors hover:border-brand-200 hover:bg-white"
+          >
+            <div>
+              <p class="font-medium text-slate-900">Property Types</p>
+              <p class="mt-1 text-sm text-slate-500">Manage categories for Property Type Interest</p>
+            </div>
+            <ChevronRightIcon class="h-5 w-5 text-slate-400" />
+          </router-link>
+        </BaseCard>
+      </div>
+    </template>
+  </div>
+</template>
