@@ -2,24 +2,39 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import { useToast } from '@/composables/useToast'
 import AppLogo from '@/components/shared/AppLogo.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const toast = useToast()
 const email = ref('')
 const error = ref('')
-const sent = ref(false)
+
+function validate() {
+  error.value = ''
+  if (!email.value.trim()) {
+    error.value = 'Email is required'
+    return false
+  }
+  if (!/\S+@\S+\.\S+/.test(email.value)) {
+    error.value = 'Enter a valid email address'
+    return false
+  }
+  return true
+}
 
 async function handleSubmit() {
-  error.value = ''
-  if (!email.value) {
-    error.value = 'Email is required'
+  if (!validate()) return
+  const result = await authStore.forgotPassword(email.value)
+  if (result.success) {
+    toast.success('Check your email', result.message)
+    router.push({ path: '/reset-password', query: { email: email.value.trim().toLowerCase() } })
     return
   }
-  const success = await authStore.forgotPassword(email.value)
-  if (success) sent.value = true
+  error.value = result.message
 }
 </script>
 
@@ -29,10 +44,12 @@ async function handleSubmit() {
       <AppLogo />
     </div>
 
-    <div v-if="!sent" class="space-y-6">
+    <div class="space-y-6">
       <div class="text-center">
         <h1 class="text-2xl font-bold text-slate-900">Reset password</h1>
-        <p class="mt-2 text-sm text-slate-500">Enter your email and we'll send reset instructions</p>
+        <p class="mt-2 text-sm text-slate-500">
+          Enter your email and we'll send a 6-digit verification code
+        </p>
       </div>
 
       <form class="space-y-5" @submit.prevent="handleSubmit">
@@ -45,7 +62,7 @@ async function handleSubmit() {
           required
         />
         <BaseButton type="submit" block :loading="authStore.loading">
-          Send reset link
+          Send verification code
         </BaseButton>
       </form>
 
@@ -54,21 +71,6 @@ async function handleSubmit() {
           Back to sign in
         </router-link>
       </p>
-    </div>
-
-    <div v-else class="space-y-6 text-center">
-      <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
-      <div>
-        <h2 class="text-xl font-semibold text-slate-900">Check your email</h2>
-        <p class="mt-2 text-sm text-slate-500">We've sent password reset instructions to {{ email }}</p>
-      </div>
-      <BaseButton variant="secondary" block @click="router.push('/login')">
-        Return to sign in
-      </BaseButton>
     </div>
   </div>
 </template>

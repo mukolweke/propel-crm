@@ -18,6 +18,7 @@ import {
   XMarkIcon,
 } from '@heroicons/vue/24/outline'
 import type { InteractionFormData } from '@/types'
+import { ApiError } from '@/services/graphql'
 
 const interactionStore = useInteractionStore()
 const contactsStore = useContactsStore()
@@ -65,7 +66,8 @@ const form = reactive<InteractionFormData>({
 })
 
 onMounted(async () => {
-  await Promise.all([interactionStore.fetchInteractions(), contactsStore.fetchContacts()])
+  await contactsStore.fetchContacts()
+  await interactionStore.fetchInteractions()
 })
 
 function resetFormFields() {
@@ -85,8 +87,10 @@ async function handleSubmit() {
     toast.success('Interaction saved')
     resetFormFields()
     showLogModal.value = false
-  } catch {
-    toast.error('Failed to log interaction')
+  } catch (err) {
+    const message =
+      err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Failed to log interaction'
+    toast.error('Save failed', message)
   } finally {
     saving.value = false
   }

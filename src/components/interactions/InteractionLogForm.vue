@@ -137,11 +137,24 @@ function selectType(type: InteractionType) {
       variant="filled"
     />
 
-    <BaseInput v-model="form.nextFollowUpDate" label="Next Follow-up Date" type="date" variant="filled">
-      <template #icon>
-        <CalendarDaysIcon class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-      </template>
-    </BaseInput>
+    <div>
+      <div class="mb-2 flex items-center justify-between">
+        <label class="text-sm font-medium text-slate-700">Next Follow-up Date</label>
+        <button
+          v-if="form.nextFollowUpDate"
+          type="button"
+          class="text-xs font-medium text-brand-600 hover:text-brand-800"
+          @click="form.nextFollowUpDate = ''"
+        >
+          Clear
+        </button>
+      </div>
+      <BaseInput v-model="form.nextFollowUpDate" type="date" variant="filled">
+        <template #icon>
+          <CalendarDaysIcon class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        </template>
+      </BaseInput>
+    </div>
 
     <BaseButton type="submit" block size="lg" :loading="saving">
       Save Interaction

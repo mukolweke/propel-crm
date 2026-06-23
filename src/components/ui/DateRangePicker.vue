@@ -9,9 +9,16 @@ import { formatIsoDateShort } from '@/utils/helpers'
 interface Props {
   start: string
   end: string
+  clearable?: boolean
+  defaultStart?: string
+  defaultEnd?: string
+  clearLabel?: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  clearable: false,
+  clearLabel: 'This month',
+})
 
 const emit = defineEmits<{
   'update:start': [value: string]
@@ -33,6 +40,17 @@ watch(
 
 const displayLabel = computed(
   () => `${formatIsoDateShort(props.start)} — ${formatIsoDateShort(props.end)}`,
+)
+
+const canReset = computed(
+  () =>
+    props.clearable &&
+    Boolean(props.defaultStart && props.defaultEnd) &&
+    (props.start !== props.defaultStart || props.end !== props.defaultEnd),
+)
+
+const showClearInPanel = computed(
+  () => props.clearable && Boolean(props.defaultStart && props.defaultEnd),
 )
 
 function syncDraft() {
@@ -62,21 +80,49 @@ function apply(close: () => void) {
   emit('apply')
   close()
 }
+
+function cancel(close: () => void) {
+  syncDraft()
+  close()
+}
+
+function resetToDefault(close?: () => void) {
+  if (!props.defaultStart || !props.defaultEnd) return
+
+  draftStart.value = props.defaultStart
+  draftEnd.value = props.defaultEnd
+  rangeError.value = ''
+  emit('update:start', props.defaultStart)
+  emit('update:end', props.defaultEnd)
+  emit('apply')
+  close?.()
+}
 </script>
 
 <template>
   <Popover v-slot="{ open }" class="relative">
-    <PopoverButton
-      class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600 transition-colors hover:border-brand-200 hover:bg-mint focus:outline-none focus:ring-2 focus:ring-brand-500/25"
-      @click="syncDraft"
-    >
-      <CalendarDaysIcon class="h-4 w-4 shrink-0 text-slate-400" />
-      <span>{{ displayLabel }}</span>
-      <ChevronDownIcon
-        class="h-4 w-4 shrink-0 text-slate-400 transition-transform"
-        :class="open ? 'rotate-180' : ''"
-      />
-    </PopoverButton>
+    <div class="inline-flex items-center gap-1">
+      <PopoverButton
+        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600 transition-colors hover:border-brand-200 hover:bg-mint focus:outline-none focus:ring-2 focus:ring-brand-500/25"
+        @click="syncDraft"
+      >
+        <CalendarDaysIcon class="h-4 w-4 shrink-0 text-slate-400" />
+        <span>{{ displayLabel }}</span>
+        <ChevronDownIcon
+          class="h-4 w-4 shrink-0 text-slate-400 transition-transform"
+          :class="open ? 'rotate-180' : ''"
+        />
+      </PopoverButton>
+      <button
+        v-if="canReset"
+        type="button"
+        class="rounded-lg px-2 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+        :title="`Reset to ${clearLabel.toLowerCase()}`"
+        @click="resetToDefault()"
+      >
+        Clear
+      </button>
+    </div>
 
     <transition
       enter-active-class="transition duration-150 ease-out"
@@ -111,13 +157,26 @@ function apply(close: () => void) {
 
         <p v-if="rangeError" class="mt-2 text-sm text-red-600">{{ rangeError }}</p>
 
-        <div class="mt-4 flex justify-end gap-2">
-          <BaseButton type="button" variant="ghost" size="sm" @click="close">
-            Cancel
+        <div class="mt-4 flex items-center justify-between gap-2">
+          <BaseButton
+            v-if="showClearInPanel"
+            type="button"
+            variant="ghost"
+            size="sm"
+            class="!px-2"
+            @click="resetToDefault(close)"
+          >
+            {{ clearLabel }}
           </BaseButton>
-          <BaseButton type="button" size="sm" @click="apply(close)">
-            Apply
-          </BaseButton>
+          <div v-else />
+          <div class="flex gap-2">
+            <BaseButton type="button" variant="ghost" size="sm" @click="cancel(close)">
+              Cancel
+            </BaseButton>
+            <BaseButton type="button" size="sm" @click="apply(close)">
+              Apply
+            </BaseButton>
+          </div>
         </div>
       </PopoverPanel>
     </transition>

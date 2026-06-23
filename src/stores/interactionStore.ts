@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Interaction, InteractionFormData } from '@/types'
-import { mockInteractions } from '@/mock'
-import { delay, generateId } from '@/utils/helpers'
+import { interactionsService, mapApiInteraction } from '@/services/interactions.service'
+import { useAuthStore } from '@/stores/authStore'
 import { useContactsStore } from './contactsStore'
+import { useToast } from '@/composables/useToast'
 
 export const useInteractionStore = defineStore('interactions', () => {
   const interactions = ref<Interaction[]>([])
@@ -27,39 +28,48 @@ export const useInteractionStore = defineStore('interactions', () => {
     ),
   )
 
+  function contactNameMap() {
+    const contactsStore = useContactsStore()
+    return new Map(contactsStore.contacts.map((c) => [c.id, c.fullName]))
+  }
+
   async function fetchInteractions() {
+    const authStore = useAuthStore()
+    if (!authStore.token) return
+
+    const contactsStore = useContactsStore()
+    if (contactsStore.contacts.length === 0) {
+      await contactsStore.fetchContacts()
+    }
+
     loading.value = true
-    await delay(500)
-    interactions.value = [...mockInteractions]
-    loading.value = false
+    try {
+      const items = await interactionsService.fetchInteractions(authStore.token)
+      const names = contactNameMap()
+      interactions.value = items.map((item) =>
+        mapApiInteraction(item, names.get(item.contactId) ?? 'Unknown'),
+      )
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load interactions'
+      useToast().error('Load failed', message)
+    } finally {
+      loading.value = false
+    }
   }
 
   async function logInteraction(data: InteractionFormData) {
-    await delay(400)
+    const authStore = useAuthStore()
+    if (!authStore.token) throw new Error('Not authenticated')
+
     const contactsStore = useContactsStore()
     const contact = contactsStore.getContactById(data.contactId)
     if (!contact) throw new Error('Contact not found')
 
-    const interaction: Interaction = {
-      id: generateId(),
-      contactId: data.contactId,
-      contactName: contact.fullName,
-      type: data.type,
-      notes: data.notes,
-      outcome: data.outcome,
-      nextFollowUpDate: data.nextFollowUpDate || null,
-      createdAt: new Date().toISOString(),
-      ownerId: 'user-001',
-    }
-
+    const created = await interactionsService.logInteraction(authStore.token, data)
+    const interaction = mapApiInteraction(created, contact.fullName)
     interactions.value.unshift(interaction)
 
-    await contactsStore.updateContact(data.contactId, {
-      lastInteraction: interaction.createdAt,
-      followUpDate: data.nextFollowUpDate || contact.followUpDate,
-      status: contact.status === 'new_lead' ? 'contacted' : contact.status,
-    })
-
+    await contactsStore.fetchContacts()
     return interaction
   }
 

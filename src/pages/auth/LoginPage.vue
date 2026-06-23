@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import { useToast } from '@/composables/useToast'
 import AppLogo from '@/components/shared/AppLogo.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
@@ -10,21 +11,29 @@ import { EnvelopeIcon, LockClosedIcon, ArrowRightIcon } from '@heroicons/vue/24/
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const toast = useToast()
+const sessionExpired = ref(false)
 
 const form = reactive({
-  email: 'agent@propel.re',
+  email: '',
   password: '',
   remember: false,
 })
 
 const errors = ref<Record<string, string>>({})
 
+onMounted(() => {
+  if (route.query.expired === '1') {
+    sessionExpired.value = true
+    toast.info('Session ended', 'Please sign in again to continue.')
+  }
+})
+
 function validate() {
   errors.value = {}
   if (!form.email) errors.value.email = 'Email is required'
   else if (!/\S+@\S+\.\S+/.test(form.email)) errors.value.email = 'Enter a valid email'
   if (!form.password) errors.value.password = 'Password is required'
-  else if (form.password.length < 6) errors.value.password = 'Password must be at least 6 characters'
   return Object.keys(errors.value).length === 0
 }
 
@@ -32,7 +41,11 @@ async function handleSubmit() {
   if (!validate()) return
   const success = await authStore.login(form.email, form.password, form.remember)
   if (success) {
-    const redirect = (route.query.redirect as string) || '/dashboard'
+    if (authStore.mustChangePassword) {
+      router.push('/change-password')
+      return
+    }
+    const redirect = (route.query.redirect as string) || (authStore.isSuperAdmin ? '/admin/dashboard' : '/dashboard')
     router.push(redirect)
   }
 }
@@ -48,6 +61,14 @@ async function handleSubmit() {
       <div class="mb-8 text-center">
         <h1 class="font-display text-2xl text-slate-900">Welcome back, Agent</h1>
         <p class="mt-2 text-sm text-slate-500">Enter your credentials to access your properties.</p>
+      </div>
+
+      <div
+        v-if="sessionExpired"
+        class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        role="alert"
+      >
+        Your session has ended. Sign in again to continue.
       </div>
 
       <form class="space-y-6" @submit.prevent="handleSubmit">

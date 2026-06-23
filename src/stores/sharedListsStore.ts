@@ -1,20 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { SharePermission, SharedList } from '@/types'
-import { mockSharedLists, mockUsers } from '@/mock'
 import { delay, generateId } from '@/utils/helpers'
 
 export const useSharedListsStore = defineStore('sharedLists', () => {
   const lists = ref<SharedList[]>([])
   const loading = ref(false)
-  const availableUsers = ref(mockUsers.filter((u) => u.id !== 'user-001'))
+  const availableUsers = ref<{ id: string; name: string; email: string }[]>([])
 
   const myLists = computed(() => lists.value.filter((l) => l.ownerId === 'user-001'))
 
   async function fetchSharedLists() {
     loading.value = true
     await delay(500)
-    lists.value = [...mockSharedLists]
+    lists.value = []
     loading.value = false
   }
 

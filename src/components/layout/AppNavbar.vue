@@ -13,6 +13,7 @@ import {
 } from '@heroicons/vue/24/outline'
 import { useSidebar } from '@/composables/useSidebar'
 import SidebarToggleButton from '@/components/ui/SidebarToggleButton.vue'
+import { getInitials } from '@/utils/constants'
 
 defineEmits<{ 'toggle-sidebar': [] }>()
 
@@ -26,9 +27,10 @@ const unreadCount = computed(
   () => settingsStore.notifications.filter((n) => !n.read).length,
 )
 
+const userInitials = computed(() => getInitials(authStore.user?.name ?? 'User'))
+
 function logout() {
-  authStore.logout()
-  router.push({ name: 'login' })
+  authStore.logout().then(() => router.push({ name: 'login' }))
 }
 </script>
 
@@ -70,7 +72,7 @@ function logout() {
         <Menu as="div" class="relative">
           <MenuButton class="flex items-center gap-2 rounded-full p-1 hover:bg-mint">
             <div class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-800">
-              {{ authStore.user?.name?.charAt(0) ?? 'A' }}
+              {{ userInitials }}
             </div>
           </MenuButton>
 

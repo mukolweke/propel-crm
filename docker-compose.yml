@@ -1,0 +1,62 @@
+services:
+  # Optional local MongoDB — only used when MONGODB_URI is not set in server/.env
+  mongo:
+    profiles: [local-db]
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    ports:
+      - '4000:4000'
+    env_file:
+      - path: ./server/.env
+        required: true
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173
+    volumes:
+      - ./server:/app
+      - api_node_modules:/app/node_modules
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:4000/health']
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 60s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    ports:
+      - '5173:5173'
+    environment:
+      VITE_GRAPHQL_URL: /graphql
+      VITE_API_PROXY_TARGET: http://api:4000
+    volumes:
+      - .:/app
+      - web_node_modules:/app/node_modules
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  mongo_data:
+  api_node_modules:
+  web_node_modules:

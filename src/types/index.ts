@@ -32,12 +32,17 @@ export interface PropertyTypeFormData {
   active: boolean
 }
 
+export type UserRole = 'super_admin' | 'user'
+
 export interface User {
   id: string
   name: string
   email: string
   avatar?: string
-  role: 'agent' | 'admin'
+  role: UserRole
+  mustChangePassword?: boolean
+  isActive?: boolean
+  mfaEnabled?: boolean
 }
 
 export interface Contact {

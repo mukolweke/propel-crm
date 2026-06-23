@@ -5,7 +5,9 @@ import { logger } from '../utils/logger.js'
 export async function connectDatabase(): Promise<void> {
   mongoose.set('strictQuery', true)
 
-  mongoose.connection.on('connected', () => logger.info('MongoDB connected'))
+  mongoose.connection.on('connected', () => {
+    logger.info('MongoDB connected', { database: mongoose.connection.db?.databaseName })
+  })
   mongoose.connection.on('error', (err) => logger.error('MongoDB error', err))
   mongoose.connection.on('disconnected', () => logger.warn('MongoDB disconnected'))
 

@@ -1,8 +1,8 @@
 scalar DateTime
 
 enum UserRole {
-  agent
-  manager
+  super_admin
+  user
 }
 
 enum ContactStatus {
@@ -46,9 +46,15 @@ type User {
   id: ID!
   fullName: String!
   email: String!
+  phone: String
+  agency: String
   role: UserRole!
   profileImage: String
   notificationSettings: NotificationSettings!
+  mustChangePassword: Boolean!
+  isActive: Boolean!
+  lastLoginAt: DateTime
+  mfaEnabled: Boolean!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -57,11 +63,17 @@ type AuthPayload {
   user: User!
   accessToken: String!
   refreshToken: String!
+  mustChangePassword: Boolean!
 }
 
 type TokenPayload {
   accessToken: String!
   refreshToken: String!
+}
+
+type MessagePayload {
+  success: Boolean!
+  message: String!
 }
 
 type Contact {
@@ -81,6 +93,16 @@ type Contact {
   isConverted: Boolean!
   createdAt: DateTime!
   updatedAt: DateTime!
+}
+
+type ContactDuplicateInfo {
+  isDuplicate: Boolean!
+  matchedField: String
+  message: String
+  code: String
+  duplicateOwnerId: ID
+  duplicateOwnerEmail: String
+  duplicateOwnerName: String
 }
 
 type Interaction {
@@ -141,16 +163,105 @@ type ConversionRateReport {
   periodEnd: DateTime!
 }
 
-input RegisterInput {
+type AdminUserRow {
+  id: ID!
   fullName: String!
   email: String!
-  password: String!
-  role: UserRole
+  role: UserRole!
+  isActive: Boolean!
+  createdAt: DateTime!
+  lastLoginAt: DateTime
 }
+
+type AdminContactRow {
+  id: ID!
+  ownerName: String!
+  ownerEmail: String!
+  contactName: String!
+  phone: String!
+  status: ContactStatus!
+  createdAt: DateTime!
+}
+
+type AuditLogEntry {
+  id: ID!
+  action: String!
+  entityType: String!
+  entityId: ID
+  performedBy: ID
+  performedByRole: UserRole
+  ownerId: ID
+  ipAddress: String
+  userAgent: String
+  metadata: JSON
+  timestamp: DateTime!
+}
+
+type PaginatedUsers {
+  items: [AdminUserRow!]!
+  total: Int!
+  page: Int!
+  pageSize: Int!
+  totalPages: Int!
+}
+
+type PaginatedAdminContacts {
+  items: [AdminContactRow!]!
+  total: Int!
+  page: Int!
+  pageSize: Int!
+  totalPages: Int!
+}
+
+type PaginatedAuditLogs {
+  items: [AuditLogEntry!]!
+  total: Int!
+  page: Int!
+  pageSize: Int!
+  totalPages: Int!
+}
+
+scalar JSON
 
 input LoginInput {
   email: String!
   password: String!
+}
+
+input ChangePasswordInput {
+  currentPassword: String!
+  newPassword: String!
+}
+
+input RequestPasswordResetInput {
+  email: String!
+}
+
+input ResetPasswordInput {
+  email: String!
+  code: String!
+  newPassword: String!
+}
+
+input NotificationSettingsInput {
+  emailAlerts: Boolean
+  followUpReminders: Boolean
+  weeklyDigest: Boolean
+  sharedListUpdates: Boolean
+}
+
+input UpdateProfileInput {
+  fullName: String
+  phone: String
+  agency: String
+  notificationSettings: NotificationSettingsInput
+}
+
+input CreateUserInput {
+  fullName: String!
+  email: String!
+  password: String!
+  role: UserRole
 }
 
 input ContactInput {
@@ -206,9 +317,20 @@ input ShareInput {
   permission: SharePermission!
 }
 
+input AuditLogFilterInput {
+  action: String
+  entityType: String
+  performedBy: ID
+  from: DateTime
+  to: DateTime
+  page: Int
+  pageSize: Int
+}
+
 type Query {
   me: User
-  myContacts: [Contact!]!
+  myContacts(search: String): [Contact!]!
+  checkContactDuplicate(phone: String, email: String, excludeContactId: ID): ContactDuplicateInfo!
   contact(id: ID!): Contact
   sharedContacts: [Contact!]!
   interactions(contactId: ID): [Interaction!]!
@@ -220,12 +342,21 @@ type Query {
   monthlyReport(year: Int, month: Int): MonthlyReport!
   conversionRate(from: DateTime, to: DateTime): ConversionRateReport!
   sharedUsers: [SharedAccess!]!
+  adminUsers(page: Int, pageSize: Int): PaginatedUsers!
+  adminContacts(page: Int, pageSize: Int): PaginatedAdminContacts!
+  auditLogs(filter: AuditLogFilterInput): PaginatedAuditLogs!
 }
 
 type Mutation {
-  register(input: RegisterInput!): AuthPayload!
   login(input: LoginInput!): AuthPayload!
+  logout(refreshToken: String): Boolean!
   refreshToken(refreshToken: String!): TokenPayload!
+  changePassword(input: ChangePasswordInput!): AuthPayload!
+  requestPasswordReset(input: RequestPasswordResetInput!): MessagePayload!
+  resetPassword(input: ResetPasswordInput!): MessagePayload!
+  updateProfile(input: UpdateProfileInput!): User!
+  createUser(input: CreateUserInput!): User!
+  setUserActive(userId: ID!, isActive: Boolean!): User!
   createContact(input: ContactInput!): Contact!
   updateContact(id: ID!, input: ContactUpdateInput!): Contact!
   deleteContact(id: ID!): Boolean!

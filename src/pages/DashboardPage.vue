@@ -130,7 +130,12 @@ function goTo(path: string) {
       <BaseCard class="flex min-h-88 flex-col">
         <div class="mb-6 flex items-center justify-between">
           <h2 class="font-display text-xl text-slate-900">Recent Activity</h2>
-          <button class="text-sm font-medium text-brand-600 hover:text-brand-700">View All</button>
+          <button
+            class="text-sm font-medium text-brand-600 hover:text-brand-700"
+            @click="router.push('/interactions')"
+          >
+            View All
+          </button>
         </div>
         <div v-if="dashboardStore.loading" class="px-1 pb-2">
           <SkeletonLoader :rows="4" />

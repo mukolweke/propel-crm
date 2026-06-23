@@ -17,3 +17,23 @@ export const dateTimeScalar = new GraphQLScalarType({
     return null
   },
 })
+
+export const jsonScalar = new GraphQLScalarType({
+  name: 'JSON',
+  serialize(value: unknown) {
+    return value
+  },
+  parseValue(value: unknown) {
+    return value
+  },
+  parseLiteral(ast) {
+    if (ast.kind === Kind.STRING) {
+      try {
+        return JSON.parse(ast.value)
+      } catch {
+        return ast.value
+      }
+    }
+    return null
+  },
+})

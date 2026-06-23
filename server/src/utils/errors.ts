@@ -5,6 +5,8 @@ export class AppError extends Error {
     message: string,
     public code: string,
     public statusCode = 400,
+    public field?: string,
+    public extra?: Record<string, unknown>,
   ) {
     super(message)
     this.name = 'AppError'
@@ -12,7 +14,12 @@ export class AppError extends Error {
 
   toGraphQLError(): GraphQLError {
     return new GraphQLError(this.message, {
-      extensions: { code: this.code, statusCode: this.statusCode },
+      extensions: {
+        code: this.code,
+        statusCode: this.statusCode,
+        ...(this.field ? { field: this.field } : {}),
+        ...this.extra,
+      },
     })
   }
 }
