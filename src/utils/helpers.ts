@@ -16,14 +16,29 @@ export function formatIsoDateShort(iso: string | null | undefined): string {
   return `${day}/${month}/${year}`
 }
 
+/** Calendar date as YYYY-MM-DD in local timezone */
+export function toLocalDateKey(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+export function toLocalDateKeyFromIso(iso: string): string {
+  return toLocalDateKey(new Date(iso))
+}
+
+export function parseLocalDate(isoDate: string): Date {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
 export function startOfMonth(date = new Date()): string {
-  const d = new Date(date.getFullYear(), date.getMonth(), 1)
-  return d.toISOString().slice(0, 10)
+  return toLocalDateKey(new Date(date.getFullYear(), date.getMonth(), 1))
 }
 
 export function endOfMonth(date = new Date()): string {
-  const d = new Date(date.getFullYear(), date.getMonth() + 1, 0)
-  return d.toISOString().slice(0, 10)
+  return toLocalDateKey(new Date(date.getFullYear(), date.getMonth() + 1, 0))
 }
 
 export function formatDateTime(date: string | null | undefined): string {

@@ -3,7 +3,8 @@ import { computed } from "vue";
 import { useRoute, RouterLink } from "vue-router";
 import AppLogo from "@/components/shared/AppLogo.vue";
 import { useSidebar } from "@/composables/useSidebar";
-import { NAV_ITEMS } from "@/utils/constants";
+import { useAuthStore } from "@/stores/authStore";
+import { getNavItemsForRole } from "@/utils/nav";
 import {
     HomeIcon,
     UsersIcon,
@@ -12,6 +13,9 @@ import {
     ShareIcon,
     Cog6ToothIcon,
     UserCircleIcon,
+    UserGroupIcon,
+    ShieldCheckIcon,
+    CalendarDaysIcon,
     XMarkIcon,
 } from "@heroicons/vue/24/outline";
 import { classNames } from "@/utils/helpers";
@@ -21,6 +25,7 @@ const props = defineProps<{ open: boolean }>();
 defineEmits<{ close: [] }>();
 
 const route = useRoute();
+const authStore = useAuthStore();
 const { collapsed, toggleCollapsed } = useSidebar();
 
 const isCollapsed = computed(() => collapsed.value && !props.open);
@@ -32,10 +37,13 @@ const iconMap = {
     ChartBarIcon,
     ShareIcon,
     Cog6ToothIcon,
+    UserGroupIcon,
+    ShieldCheckIcon,
+    CalendarDaysIcon,
 };
 
 const navItems = computed(() =>
-    NAV_ITEMS.map((item) => ({
+    getNavItemsForRole(authStore.user?.role).map((item) => ({
         ...item,
         icon: iconMap[item.icon as keyof typeof iconMap],
         active: route.path === item.to || route.path.startsWith(item.to + "/"),

@@ -1,10 +1,42 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { UserSettings } from '@/types'
-import { defaultSettings, mockNotifications } from '@/mock'
-import type { Notification } from '@/types'
-import { delay } from '@/utils/helpers'
+import type { UserSettings, Notification } from '@/types'
+import { settingsService } from '@/services/settings.service'
+import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/composables/useToast'
+
+const EXPORT_SETTINGS_KEY = 'propel_export_settings'
+
+const defaultSettings: UserSettings = {
+  profile: { name: '', email: '', phone: '', agency: '' },
+  notifications: {
+    emailAlerts: true,
+    followUpReminders: true,
+    weeklyDigest: false,
+    sharedListUpdates: true,
+  },
+  preferences: {
+    defaultView: 'table',
+    timezone: 'America/New_York',
+    dateFormat: 'MMM D, YYYY',
+    accentColor: 'emerald',
+  },
+  exportSettings: {
+    defaultFormat: 'csv',
+    includeNotes: true,
+    includeInteractions: true,
+  },
+}
+
+function loadExportSettings(): UserSettings['exportSettings'] {
+  try {
+    const raw = localStorage.getItem(EXPORT_SETTINGS_KEY)
+    if (raw) return { ...defaultSettings.exportSettings, ...JSON.parse(raw) }
+  } catch {
+    // ignore
+  }
+  return { ...defaultSettings.exportSettings }
+}
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<UserSettings>(structuredClone(defaultSettings))
@@ -13,49 +45,85 @@ export const useSettingsStore = defineStore('settings', () => {
   const saving = ref(false)
 
   async function fetchSettings() {
+    const authStore = useAuthStore()
+    if (!authStore.token) return
+
     loading.value = true
-    await delay(400)
-    notifications.value = [...mockNotifications]
-    loading.value = false
+    try {
+      const apiSettings = await settingsService.fetchMe(authStore.token)
+      settings.value = {
+        ...apiSettings,
+        exportSettings: loadExportSettings(),
+      }
+      authStore.syncUser({
+        name: apiSettings.profile.name,
+        email: apiSettings.profile.email,
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load settings'
+      useToast().error('Load failed', message)
+    } finally {
+      loading.value = false
+    }
   }
 
   async function saveProfile(profile: UserSettings['profile']) {
+    const authStore = useAuthStore()
+    if (!authStore.token) return
+
     saving.value = true
-    await delay(500)
-    settings.value.profile = { ...profile }
-    saving.value = false
-    useToast().success('Profile updated')
+    try {
+      const updated = await settingsService.updateProfile(authStore.token, {
+        fullName: profile.name,
+        phone: profile.phone,
+        agency: profile.agency,
+        notificationSettings: settings.value.notifications,
+      })
+      settings.value = {
+        ...updated,
+        exportSettings: settings.value.exportSettings,
+      }
+      authStore.syncUser({
+        name: updated.profile.name,
+        email: updated.profile.email,
+      })
+      useToast().success('Profile updated')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save profile'
+      useToast().error('Save failed', message)
+    } finally {
+      saving.value = false
+    }
   }
 
   async function saveNotifications(notifs: UserSettings['notifications']) {
+    const authStore = useAuthStore()
+    if (!authStore.token) return
+
     saving.value = true
-    await delay(400)
-    settings.value.notifications = { ...notifs }
-    saving.value = false
-    useToast().success('Notification preferences saved')
+    try {
+      const updated = await settingsService.updateProfile(authStore.token, {
+        notificationSettings: notifs,
+      })
+      settings.value.notifications = updated.notifications
+      useToast().success('Notification preferences saved')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save notifications'
+      useToast().error('Save failed', message)
+    } finally {
+      saving.value = false
+    }
   }
 
   async function savePreferences(prefs: UserSettings['preferences']) {
-    saving.value = true
-    await delay(400)
     settings.value.preferences = { ...prefs }
-    saving.value = false
     useToast().success('Preferences saved')
   }
 
   async function saveExportSettings(exportSettings: UserSettings['exportSettings']) {
-    saving.value = true
-    await delay(400)
     settings.value.exportSettings = { ...exportSettings }
-    saving.value = false
+    localStorage.setItem(EXPORT_SETTINGS_KEY, JSON.stringify(exportSettings))
     useToast().success('Export settings saved')
-  }
-
-  async function changePassword(_current: string, _newPassword: string) {
-    saving.value = true
-    await delay(600)
-    saving.value = false
-    useToast().success('Password changed successfully')
   }
 
   function markNotificationRead(id: string) {
@@ -79,7 +147,6 @@ export const useSettingsStore = defineStore('settings', () => {
     saveNotifications,
     savePreferences,
     saveExportSettings,
-    changePassword,
     markNotificationRead,
     markAllNotificationsRead,
   }

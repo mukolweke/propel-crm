@@ -6,12 +6,21 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "docker:dev": "docker compose up --build",
+    "docker:dev:local-db": "docker compose --profile local-db up --build",
+    "docker:down": "docker compose down",
+    "docker:reset": "docker compose down -v && docker compose up --build",
+    "docker:seed": "docker compose exec api npm run seed",
+    "docker:migrate": "docker compose exec api npm run db:migrate -- test propel-crm",
+    "docker:logs": "docker compose logs -f api web"
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.23",
     "@heroicons/vue": "^2.2.0",
     "axios": "^1.9.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "pinia": "^3.0.2",
     "vue": "^3.5.13",
     "vue-router": "^4.5.1"

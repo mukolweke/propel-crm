@@ -2,75 +2,114 @@ import { Types } from 'mongoose'
 import { FollowUp } from '../../models/index.js'
 import { AppError } from '../../utils/errors.js'
 import { contactService } from '../contacts/contact.service.js'
+import { isSuperAdmin } from '../../middleware/rbac.js'
 import { parseInput, followUpInputSchema } from '../../validators/index.js'
+import { parseObjectId } from '../../utils/objectId.js'
 import { startOfDay, endOfDay } from '../../utils/helpers.js'
+import { auditService } from '../audit/audit.service.js'
+import type { AuthUser } from '../../types/index.js'
 
-async function syncOverdueStatus(userId: string) {
-  const now = new Date()
-  await FollowUp.updateMany(
-    { ownerId: userId, status: 'pending', scheduledDate: { $lt: startOfDay(now) } },
-    { status: 'overdue' },
-  )
+async function syncOverdueStatus(user: AuthUser) {
+  const filter: Record<string, unknown> = { status: 'pending', scheduledDate: { $lt: startOfDay(new Date()) } }
+  if (!isSuperAdmin(user)) filter.ownerId = user.id
+  await FollowUp.updateMany(filter, { status: 'overdue' })
+}
+
+function ownerFilter(user: AuthUser): Record<string, unknown> {
+  return isSuperAdmin(user) ? {} : { ownerId: user.id }
 }
 
 export const followUpService = {
-  async todayFollowUps(userId: string) {
-    await syncOverdueStatus(userId)
+  async todayFollowUps(user: AuthUser) {
+    await syncOverdueStatus(user)
     const today = new Date()
     return FollowUp.find({
-      ownerId: userId,
+      ...ownerFilter(user),
       scheduledDate: { $gte: startOfDay(today), $lte: endOfDay(today) },
       status: { $in: ['pending', 'overdue'] },
     }).sort({ scheduledDate: 1 })
   },
 
-  async overdueFollowUps(userId: string) {
-    await syncOverdueStatus(userId)
-    return FollowUp.find({ ownerId: userId, status: 'overdue' }).sort({ scheduledDate: 1 })
+  async overdueFollowUps(user: AuthUser) {
+    await syncOverdueStatus(user)
+    return FollowUp.find({ ...ownerFilter(user), status: 'overdue' }).sort({ scheduledDate: 1 })
   },
 
-  async upcomingFollowUps(userId: string, days = 7) {
-    await syncOverdueStatus(userId)
+  async upcomingFollowUps(user: AuthUser, days = 7) {
+    await syncOverdueStatus(user)
     const start = endOfDay(new Date())
     const end = new Date()
     end.setDate(end.getDate() + days)
     return FollowUp.find({
-      ownerId: userId,
+      ...ownerFilter(user),
       status: 'pending',
       scheduledDate: { $gt: start, $lte: endOfDay(end) },
     }).sort({ scheduledDate: 1 })
   },
 
-  async createFollowUp(userId: string, input: unknown) {
+  async createFollowUp(
+    user: AuthUser,
+    input: unknown,
+    meta: { ip?: string; userAgent?: string },
+  ) {
     const data = parseInput(followUpInputSchema, input)
-    await contactService.assertContactAccess(userId, data.contactId, true)
+    await contactService.assertContactAccess(user, data.contactId, true)
 
-    return FollowUp.create({
-      ownerId: new Types.ObjectId(userId),
+    const followUp = await FollowUp.create({
+      ownerId: new Types.ObjectId(user.id),
       contactId: new Types.ObjectId(data.contactId),
       scheduledDate: new Date(data.scheduledDate),
       notes: data.notes ?? '',
       status: 'pending',
     })
+
+    await auditService.log({
+      action: 'FOLLOWUP_CREATED',
+      entityType: 'FOLLOWUP',
+      entityId: followUp._id.toString(),
+      performedBy: user,
+      ownerId: user.id,
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    })
+
+    return followUp
   },
 
-  async completeFollowUp(userId: string, followUpId: string) {
+  async completeFollowUp(
+    user: AuthUser,
+    followUpId: string,
+    meta: { ip?: string; userAgent?: string },
+  ) {
+    parseObjectId(followUpId, 'follow-up ID')
     const followUp = await FollowUp.findById(followUpId)
     if (!followUp) throw new AppError('Follow-up not found', 'NOT_FOUND', 404)
-    if (followUp.ownerId.toString() !== userId) {
+    if (!isSuperAdmin(user) && followUp.ownerId.toString() !== user.id) {
       throw new AppError('Not authorized', 'FORBIDDEN', 403)
     }
 
     followUp.status = 'completed'
     followUp.completedAt = new Date()
     await followUp.save()
+
+    await auditService.log({
+      action: 'FOLLOWUP_COMPLETED',
+      entityType: 'FOLLOWUP',
+      entityId: followUpId,
+      performedBy: user,
+      ownerId: followUp.ownerId.toString(),
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    })
+
     return followUp
   },
 
-  async rescheduleFollowUp(userId: string, followUpId: string, scheduledDate: string) {
+  async rescheduleFollowUp(user: AuthUser, followUpId: string, scheduledDate: string) {
+    parseObjectId(followUpId, 'follow-up ID')
     const followUp = await FollowUp.findById(followUpId)
     if (!followUp) throw new AppError('Follow-up not found', 'NOT_FOUND', 404)
-    if (followUp.ownerId.toString() !== userId) {
+    if (!isSuperAdmin(user) && followUp.ownerId.toString() !== user.id) {
       throw new AppError('Not authorized', 'FORBIDDEN', 403)
     }
 

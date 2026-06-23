@@ -1,62 +1,95 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { ChartDataPoint, ReportMetrics } from '@/types'
+import { endOfMonth, startOfMonth } from '@/utils/helpers'
+import { exportReport as downloadReport } from '@/utils/reportExport'
 import {
-  mockConversionTrend,
-  mockDailyReport,
-  mockLeadsGrowth,
-  mockMonthlyReport,
-  mockWeeklyReport,
-} from '@/mock'
-import { delay, downloadFile } from '@/utils/helpers'
+  reportsService,
+  chartHasData,
+  type ConversionDetailRow,
+  type LeadSourceStat,
+} from '@/services/reports.service'
+import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/composables/useToast'
 
-export type ReportPeriod = 'daily' | 'weekly' | 'monthly'
+const emptyMetrics: ReportMetrics = {
+  leadsCreated: 0,
+  interactions: 0,
+  conversionRate: 0,
+  followUpCompletion: 0,
+}
+
+export type ReportPeriod = 'daily' | 'monthly'
 
 export const useReportsStore = defineStore('reports', () => {
   const loading = ref(false)
   const period = ref<ReportPeriod>('daily')
-  const dateFrom = ref('2023-10-01')
-  const dateTo = ref('2023-10-31')
-  const metrics = ref<ReportMetrics>(mockDailyReport)
+  const dateFrom = ref(startOfMonth())
+  const dateTo = ref(endOfMonth())
+  const metrics = ref<ReportMetrics>({ ...emptyMetrics })
   const leadsGrowth = ref<ChartDataPoint[]>([])
   const conversionTrend = ref<ChartDataPoint[]>([])
+  const leadSources = ref<LeadSourceStat[]>([])
+  const conversionDetails = ref<ConversionDetailRow[]>([])
+  const mostActiveDay = ref('—')
+  const leadSourceTotal = ref(0)
 
-  async function fetchReports(p: ReportPeriod = 'daily') {
+  const hasChartData = computed(() => chartHasData(conversionTrend.value))
+  const defaultDateFrom = computed(() => startOfMonth())
+  const defaultDateTo = computed(() => endOfMonth())
+
+  function resetDateRange() {
+    dateFrom.value = startOfMonth()
+    dateTo.value = endOfMonth()
+  }
+
+  async function fetchReports(p: ReportPeriod = period.value) {
+    const authStore = useAuthStore()
+    if (!authStore.token) return
+
     loading.value = true
     period.value = p
-    await delay(600)
+    try {
+      const data = await reportsService.fetchReports(authStore.token, {
+        from: dateFrom.value,
+        to: dateTo.value,
+        period: p,
+      })
 
-    switch (p) {
-      case 'weekly':
-        metrics.value = { ...mockWeeklyReport }
-        break
-      case 'monthly':
-        metrics.value = { ...mockMonthlyReport }
-        break
-      default:
-        metrics.value = { ...mockDailyReport }
+      metrics.value = data.metrics
+      conversionTrend.value = data.conversionTrend
+      leadSources.value = data.leadSources
+      conversionDetails.value = data.conversionDetails
+      mostActiveDay.value = data.mostActiveDay
+      leadSourceTotal.value = data.leadSourceTotal
+      leadsGrowth.value = []
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load reports'
+      useToast().error('Reports error', message)
+      metrics.value = { ...emptyMetrics }
+      conversionTrend.value = []
+      leadSources.value = []
+      conversionDetails.value = []
+      mostActiveDay.value = '—'
+      leadSourceTotal.value = 0
+    } finally {
+      loading.value = false
     }
-
-    leadsGrowth.value = [...mockLeadsGrowth]
-    conversionTrend.value = [...mockConversionTrend]
-    loading.value = false
   }
 
   function exportReport(format: 'csv' | 'excel' | 'pdf') {
     const toast = useToast()
-    const m = metrics.value
-    const content = [
-      'Metric,Value',
-      `Leads Created,${m.leadsCreated}`,
-      `Interactions,${m.interactions}`,
-      `Conversion Rate,${m.conversionRate}%`,
-      `Follow-up Completion,${m.followUpCompletion}%`,
-    ].join('\n')
-
-    const ext = format === 'pdf' ? 'pdf' : format === 'excel' ? 'xlsx' : 'csv'
-    downloadFile(`propel-report-${period.value}.${ext}`, content)
-    toast.success('Export started', `Your ${format.toUpperCase()} report is downloading.`)
+    downloadReport(format, {
+      period: period.value,
+      dateFrom: dateFrom.value,
+      dateTo: dateTo.value,
+      metrics: metrics.value,
+      conversionDetails: conversionDetails.value,
+      leadSources: leadSources.value,
+      mostActiveDay: mostActiveDay.value,
+    })
+    const label = format === 'excel' ? 'Excel' : format.toUpperCase()
+    toast.success('Export complete', `Your ${label} report has been downloaded.`)
   }
 
   return {
@@ -64,9 +97,17 @@ export const useReportsStore = defineStore('reports', () => {
     period,
     dateFrom,
     dateTo,
+    defaultDateFrom,
+    defaultDateTo,
+    resetDateRange,
     metrics,
     leadsGrowth,
     conversionTrend,
+    leadSources,
+    conversionDetails,
+    mostActiveDay,
+    leadSourceTotal,
+    hasChartData,
     fetchReports,
     exportReport,
   }

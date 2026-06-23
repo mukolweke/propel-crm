@@ -16,14 +16,14 @@ export const mockUser: User = {
   id: 'user-001',
   name: 'Alexander Sterling',
   email: 'alex.sterling@propelcrm.com',
-  role: 'agent',
+  role: 'user',
 }
 
 export const mockUsers: User[] = [
   mockUser,
-  { id: 'user-002', name: 'Sarah Connor', email: 'sarah.connor@propelcrm.com', role: 'agent' },
-  { id: 'user-003', name: 'Marcus Wright', email: 'marcus.wright@propelcrm.com', role: 'agent' },
-  { id: 'user-004', name: 'Elena Gilbert', email: 'elena.gilbert@propelcrm.com', role: 'admin' },
+  { id: 'user-002', name: 'Sarah Connor', email: 'sarah.connor@propelcrm.com', role: 'user' },
+  { id: 'user-003', name: 'Marcus Wright', email: 'marcus.wright@propelcrm.com', role: 'user' },
+  { id: 'user-004', name: 'Elena Gilbert', email: 'elena.gilbert@propelcrm.com', role: 'super_admin' },
 ]
 
 export const mockContacts: Contact[] = generated.contacts as Contact[]

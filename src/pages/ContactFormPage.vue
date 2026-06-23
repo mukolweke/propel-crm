@@ -8,6 +8,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import { UsersIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import type { ContactFormData } from '@/types'
+import { ApiError } from '@/services/graphql'
 
 const route = useRoute()
 const router = useRouter()
@@ -52,8 +53,9 @@ async function handleSubmit(data: ContactFormData) {
       toast.success('Contact saved')
     }
     router.push('/contacts')
-  } catch {
-    toast.error('Failed to save contact')
+  } catch (err) {
+    const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Failed to save contact'
+    toast.error('Save failed', message)
   } finally {
     saving.value = false
   }

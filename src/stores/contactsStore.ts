@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Contact, ContactFilters, ContactFormData, PaginatedResult } from '@/types'
-import { mockContacts } from '@/mock'
-import { delay, generateId, isThisWeek, isToday } from '@/utils/helpers'
+import { isThisWeek, isToday } from '@/utils/helpers'
+import { contactsService } from '@/services/contacts.service'
+import { useAuthStore } from '@/stores/authStore'
+import { useToast } from '@/composables/useToast'
 
 const defaultFilters = (): ContactFilters => ({
   search: '',
@@ -82,10 +84,21 @@ export const useContactsStore = defineStore('contacts', () => {
   })
 
   async function fetchContacts() {
+    const authStore = useAuthStore()
+    if (!authStore.token) return
+
     loading.value = true
-    await delay(600)
-    contacts.value = [...mockContacts]
-    loading.value = false
+    try {
+      contacts.value = await contactsService.fetchContacts(
+        authStore.token,
+        filters.value.search || undefined,
+      )
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load contacts'
+      useToast().error('Load failed', message)
+    } finally {
+      loading.value = false
+    }
   }
 
   function setFilters(partial: Partial<ContactFilters>) {
@@ -106,37 +119,47 @@ export const useContactsStore = defineStore('contacts', () => {
   }
 
   async function addContact(data: ContactFormData) {
-    await delay(400)
-    const now = new Date().toISOString()
-    const contact: Contact = {
-      id: generateId(),
-      ...data,
-      lastInteraction: null,
-      followUpDate: null,
-      converted: data.status === 'converted',
-      createdAt: now,
-      updatedAt: now,
-      ownerId: 'user-001',
-    }
+    const authStore = useAuthStore()
+    if (!authStore.token) throw new Error('Not authenticated')
+
+    const contact = await contactsService.createContact(authStore.token, data)
     contacts.value.unshift(contact)
     return contact
   }
 
-  async function updateContact(id: string, data: Partial<ContactFormData> & Partial<Pick<Contact, 'lastInteraction' | 'followUpDate' | 'converted'>>) {
-    await delay(400)
-    const index = contacts.value.findIndex((c) => c.id === id)
-    if (index === -1) throw new Error('Contact not found')
-    contacts.value[index] = {
-      ...contacts.value[index],
-      ...data,
-      converted: data.status === 'converted' ? true : contacts.value[index].converted,
-      updatedAt: new Date().toISOString(),
+  async function updateContact(
+    id: string,
+    data: Partial<ContactFormData> & Partial<Pick<Contact, 'lastInteraction' | 'followUpDate' | 'converted'>>,
+  ) {
+    const authStore = useAuthStore()
+    if (!authStore.token) throw new Error('Not authenticated')
+
+    const existing = getContactById(id)
+    if (!existing) throw new Error('Contact not found')
+
+    const formData: ContactFormData = {
+      fullName: data.fullName ?? existing.fullName,
+      phone: data.phone ?? existing.phone,
+      email: data.email ?? existing.email,
+      propertyType: data.propertyType ?? existing.propertyType,
+      budgetRange: data.budgetRange ?? existing.budgetRange,
+      locationPreference: data.locationPreference ?? existing.locationPreference,
+      leadSource: data.leadSource ?? existing.leadSource,
+      notes: data.notes ?? existing.notes,
+      status: data.status ?? existing.status,
     }
-    return contacts.value[index]
+
+    const contact = await contactsService.updateContact(authStore.token, id, formData)
+    const index = contacts.value.findIndex((c) => c.id === id)
+    if (index !== -1) contacts.value[index] = contact
+    return contact
   }
 
   async function deleteContact(id: string) {
-    await delay(300)
+    const authStore = useAuthStore()
+    if (!authStore.token) throw new Error('Not authenticated')
+
+    await contactsService.deleteContact(authStore.token, id)
     contacts.value = contacts.value.filter((c) => c.id !== id)
   }
 
