@@ -182,6 +182,7 @@ export const exportContactsSchema = z.object({
   search: contactSearchQuerySchema,
   dateFrom: dateOnlySchema,
   dateTo: dateOnlySchema,
+  exportPassword: z.string().min(1, 'Account password is required').max(128),
 })
 
 export const exportReportSchema = z.object({
@@ -189,6 +190,7 @@ export const exportReportSchema = z.object({
   period: z.enum(['daily', 'monthly']),
   dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dateFrom must be YYYY-MM-DD'),
   dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dateTo must be YYYY-MM-DD'),
+  exportPassword: z.string().min(1, 'Account password is required').max(128),
 })
 
 const auditTextFilterSchema = z

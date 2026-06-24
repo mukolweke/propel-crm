@@ -83,6 +83,7 @@ input ExportContactsInput {
   search: String
   dateFrom: String
   dateTo: String
+  exportPassword: String!
 }
 
 input ExportReportInput {
@@ -90,6 +91,7 @@ input ExportReportInput {
   period: String!
   dateFrom: String!
   dateTo: String!
+  exportPassword: String!
 }
 
 type ExportPayload {

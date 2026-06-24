@@ -123,6 +123,18 @@ export const authService = {
     return { user: authUser, tokens, mustChangePassword: user.mustChangePassword }
   },
 
+  /** Re-verify the user's account password (e.g. before sensitive exports). Does not affect login lockout counters. */
+  async verifyPassword(userId: string, password: string): Promise<void> {
+    const user = await User.findOne({ _id: userId, deletedAt: { $exists: false } }).select('+password')
+    if (!user || !user.isActive) {
+      throw new AppError('Incorrect account password', 'INVALID_CREDENTIALS', 401)
+    }
+    const valid = await bcrypt.compare(password, user.password)
+    if (!valid) {
+      throw new AppError('Incorrect account password', 'INVALID_CREDENTIALS', 401)
+    }
+  },
+
   async logout(user: AuthUser, refreshToken: string | undefined, meta: { ip?: string; userAgent?: string }) {
     if (refreshToken) {
       const { verifyRefreshToken } = await import('../../utils/jwt.js')

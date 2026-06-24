@@ -7,7 +7,7 @@ declare module 'vue-router' {
   interface RouteMeta {
     guest?: boolean
     requiresAuth?: boolean
-    layout?: 'auth' | 'dashboard'
+    layout?: 'auth' | 'dashboard' | 'legal'
     roles?: UserRole[]
     allowMustChangePassword?: boolean
   }
@@ -52,6 +52,18 @@ const router = createRouter({
       name: 'forbidden',
       component: () => import('@/pages/auth/ForbiddenPage.vue'),
       meta: { layout: 'auth' },
+    },
+    {
+      path: '/privacy',
+      name: 'privacy',
+      component: () => import('@/pages/legal/PrivacyPolicyPage.vue'),
+      meta: { layout: 'legal' },
+    },
+    {
+      path: '/terms',
+      name: 'terms',
+      component: () => import('@/pages/legal/TermsOfServicePage.vue'),
+      meta: { layout: 'legal' },
     },
     {
       path: '/dashboard',

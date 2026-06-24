@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReportsStore } from '@/stores/reportsStore'
 import type { ReportPeriod } from '@/stores/reportsStore'
@@ -11,6 +11,8 @@ import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import DateRangePicker from '@/components/ui/DateRangePicker.vue'
+import ExportConfidentialityNotice from '@/components/legal/ExportConfidentialityNotice.vue'
+import ExportPasswordModal from '@/components/legal/ExportPasswordModal.vue'
 import {
   DocumentArrowDownIcon,
   TableCellsIcon,
@@ -22,6 +24,8 @@ import {
 
 const router = useRouter()
 const reportsStore = useReportsStore()
+const exportModalOpen = ref(false)
+const pendingFormat = ref<'csv' | 'excel' | 'pdf' | null>(null)
 
 const tabs: { value: ReportPeriod; label: string }[] = [
   { value: 'daily', label: 'Daily Report' },
@@ -43,26 +47,46 @@ function switchTab(period: ReportPeriod) {
 function onDateRangeApply() {
   reportsStore.fetchReports(reportsStore.period)
 }
+
+function requestExport(format: 'csv' | 'excel' | 'pdf') {
+  pendingFormat.value = format
+  exportModalOpen.value = true
+}
+
+async function confirmExport(password: string) {
+  if (!pendingFormat.value) return
+  await reportsStore.exportReport(pendingFormat.value, password)
+  exportModalOpen.value = false
+  pendingFormat.value = null
+}
 </script>
 
 <template>
   <div class="space-y-8">
+    <ExportPasswordModal
+      v-model:open="exportModalOpen"
+      :loading="reportsStore.loading"
+      @confirm="confirmExport"
+    />
     <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
       <div>
         <h1 class="font-display text-3xl text-slate-900">Analytics & Reports</h1>
         <p class="mt-2 text-sm text-slate-500">Monitor your sales performance and lead conversion trends.</p>
       </div>
-      <div class="flex flex-wrap gap-3">
+      <div class="flex w-full max-w-xl flex-col gap-3 xl:max-w-none xl:items-end">
+        <ExportConfidentialityNotice />
+        <div class="flex flex-wrap gap-3">
         <BaseButton
           v-for="action in exportActions"
           :key="action.format"
           variant="outline"
           size="md"
-          @click="reportsStore.exportReport(action.format)"
+          @click="requestExport(action.format)"
         >
           <component :is="action.icon" class="h-4 w-4 shrink-0" />
           {{ action.label }}
         </BaseButton>
+        </div>
       </div>
     </div>
 

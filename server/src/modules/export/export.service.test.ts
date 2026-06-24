@@ -80,7 +80,7 @@ describe('exportService — contacts export audit', { skip: !env.MONGODB_URI }, 
       mustChangePassword: false,
     }
 
-    const payload = await exportService.exportContacts(user, {}, {})
+    const payload = await exportService.exportContacts(user, { exportPassword: 'TestPass!123' }, {})
     assert.equal(payload.recordCount, 2)
     assert.match(payload.content, /Export Contact A/)
     assert.match(payload.content, /Export Contact B/)

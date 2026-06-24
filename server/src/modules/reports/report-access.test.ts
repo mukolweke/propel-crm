@@ -118,7 +118,7 @@ describe('report access — shared contact permissions', { skip: !env.MONGODB_UR
 
     const payload = await exportService.exportReport(
       viewer,
-      { format: 'excel', period: 'monthly', dateFrom, dateTo },
+      { format: 'excel', period: 'monthly', dateFrom, dateTo, exportPassword: 'TestPass!123' },
       {},
     )
 

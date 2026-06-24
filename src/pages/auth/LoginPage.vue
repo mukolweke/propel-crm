@@ -120,6 +120,13 @@ async function handleSubmit() {
           Login
           <ArrowRightIcon class="h-4 w-4" />
         </BaseButton>
+
+        <p class="text-center text-xs leading-relaxed text-slate-500">
+          By signing in, you agree to our
+          <router-link to="/terms" class="font-medium text-brand-600 hover:text-brand-700">Terms of Service</router-link>
+          and
+          <router-link to="/privacy" class="font-medium text-brand-600 hover:text-brand-700">Privacy Policy</router-link>.
+        </p>
       </form>
     </div>
   </div>

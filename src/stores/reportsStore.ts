@@ -78,7 +78,7 @@ export const useReportsStore = defineStore('reports', () => {
     }
   }
 
-  async function exportReport(format: 'csv' | 'excel' | 'pdf') {
+  async function exportReport(format: 'csv' | 'excel' | 'pdf', exportPassword: string) {
     const toast = useToast()
     loading.value = true
     try {
@@ -87,9 +87,10 @@ export const useReportsStore = defineStore('reports', () => {
         period: period.value,
         dateFrom: dateFrom.value,
         dateTo: dateTo.value,
+        exportPassword,
       })
 
-      exportReportFromServerPayload(format, {
+      await exportReportFromServerPayload(format, {
         filename: payload.filename,
         mimeType: payload.mimeType,
         content: payload.content,
@@ -108,10 +109,10 @@ export const useReportsStore = defineStore('reports', () => {
               mostActiveDay: payload.reportData.mostActiveDay,
             }
           : undefined,
-      })
+      }, exportPassword)
 
       const label = format === 'excel' ? 'Excel' : format.toUpperCase()
-      toast.success('Export complete', `Your ${label} report has been downloaded.`)
+      toast.success('Export complete', `Your password-protected ${label} export has been downloaded.`)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Export failed'
       toast.error('Export failed', message)

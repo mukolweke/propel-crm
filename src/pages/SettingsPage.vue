@@ -9,6 +9,7 @@ import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseSelect from '@/components/ui/BaseSelect.vue'
 import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
 import PasswordRequirements from '@/components/ui/PasswordRequirements.vue'
+import ExportConfidentialityNotice from '@/components/legal/ExportConfidentialityNotice.vue'
 import { isPasswordValid } from '@/utils/password'
 import { getInitials } from '@/utils/constants'
 import {
@@ -182,10 +183,22 @@ async function changePassword() {
             ]"
             variant="filled"
           />
+          <ExportConfidentialityNotice class="mt-4" />
           <div class="mt-5 rounded-xl border border-slate-200 bg-mint p-4">
             <p class="text-sm font-medium text-slate-900">Request Full Backup</p>
             <p class="mt-1 text-xs text-slate-500">Download all contact and deal history</p>
             <BaseButton class="mt-3" variant="outline" size="sm">Request</BaseButton>
+          </div>
+        </BaseCard>
+
+        <BaseCard class="sm:col-span-2">
+          <div class="mb-5 flex items-center gap-2">
+            <ShieldCheckIcon class="h-5 w-5 text-brand-700" />
+            <h2 class="font-display text-lg text-slate-900">Legal</h2>
+          </div>
+          <div class="flex flex-wrap gap-4 text-sm">
+            <router-link to="/privacy" class="font-medium text-brand-600 hover:text-brand-700">Privacy Policy</router-link>
+            <router-link to="/terms" class="font-medium text-brand-600 hover:text-brand-700">Terms of Service</router-link>
           </div>
         </BaseCard>
 

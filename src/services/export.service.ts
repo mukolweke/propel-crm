@@ -57,6 +57,7 @@ export const exportService = {
     search?: string
     dateFrom?: string
     dateTo?: string
+    exportPassword: string
   }): Promise<ExportPayload> {
     const data = await graphqlRequest<{ exportContacts: ExportPayload }>(EXPORT_CONTACTS, { input })
     return data.exportContacts
@@ -67,6 +68,7 @@ export const exportService = {
     period: 'daily' | 'monthly'
     dateFrom: string
     dateTo: string
+    exportPassword: string
   }): Promise<ExportPayload> {
     const data = await graphqlRequest<{ exportReport: ExportPayload }>(EXPORT_REPORT, { input })
     return data.exportReport

@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { BlobReader, BlobWriter, ZipWriter } from '@zip.js/zip.js'
 import type { ReportMetrics } from '@/types'
 import type { ConversionDetailRow, LeadSourceStat } from '@/services/reports.service'
 import type { ReportPeriod } from '@/stores/reportsStore'
@@ -28,8 +29,9 @@ export function escapeCsv(value: string): string {
   return safe
 }
 
-function downloadBlob(filename: string, blob: Blob): void {
-  const url = URL.createObjectURL(blob)
+function downloadBlob(filename: string, blob: Blob, mimeType?: string): void {
+  const file = mimeType && blob.type !== mimeType ? new Blob([blob], { type: mimeType }) : blob
+  const url = URL.createObjectURL(file)
   const link = document.createElement('a')
   link.href = url
   link.download = filename
@@ -139,6 +141,14 @@ export function exportReportExcel(data: ReportExportData): void {
 }
 
 export function exportReportPdf(data: ReportExportData): void {
+  downloadBlob(
+    `propel-report-${data.period}-${data.dateFrom}.pdf`,
+    buildReportPdfBlob(data),
+    'application/pdf',
+  )
+}
+
+function buildReportPdfDoc(data: ReportExportData): jsPDF {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
 
   doc.setFontSize(16)
@@ -194,7 +204,11 @@ export function exportReportPdf(data: ReportExportData): void {
     headStyles: { fillColor: [22, 101, 52] },
   })
 
-  doc.save(`propel-report-${data.period}-${data.dateFrom}.pdf`)
+  return doc
+}
+
+export function buildReportPdfBlob(data: ReportExportData): Blob {
+  return buildReportPdfDoc(data).output('blob')
 }
 
 export function exportReport(format: 'csv' | 'excel' | 'pdf', data: ReportExportData): void {
@@ -212,6 +226,63 @@ export function downloadExportPayload(payload: {
   downloadBlob(payload.filename, blob)
 }
 
+export async function wrapInPasswordProtectedZip(
+  innerFilename: string,
+  content: string | Blob,
+  zipFilename: string,
+  password: string,
+  mimeType?: string,
+): Promise<void> {
+  const blob =
+    typeof content === 'string'
+      ? new Blob([content], { type: mimeType ?? 'application/octet-stream' })
+      : content
+
+  const zipWriter = new ZipWriter(new BlobWriter('application/zip'))
+  await zipWriter.add(innerFilename, new BlobReader(blob), {
+    password,
+    encryptionStrength: 3,
+    zipCrypto: false,
+  })
+  const zipBlob = await zipWriter.close()
+  downloadBlob(zipFilename, zipBlob)
+}
+
+export async function downloadPasswordProtectedExport(
+  format: 'csv' | 'excel' | 'pdf',
+  payload: {
+    filename: string
+    mimeType: string
+    content: string
+    reportData?: ReportExportData
+  },
+  password: string,
+): Promise<void> {
+  const zipFilename = payload.filename.replace(/\.[^.]+$/, '') + '.zip'
+
+  if (format === 'pdf') {
+    if (!payload.reportData) {
+      throw new Error('Missing report data for PDF export')
+    }
+    await wrapInPasswordProtectedZip(
+      payload.filename,
+      buildReportPdfBlob(payload.reportData),
+      zipFilename,
+      password,
+      'application/pdf',
+    )
+    return
+  }
+
+  await wrapInPasswordProtectedZip(
+    payload.filename,
+    payload.content,
+    zipFilename,
+    password,
+    payload.mimeType,
+  )
+}
+
 export function exportReportFromServerPayload(
   format: 'csv' | 'excel' | 'pdf',
   payload: {
@@ -220,13 +291,7 @@ export function exportReportFromServerPayload(
     content: string
     reportData?: ReportExportData
   },
-): void {
-  if (format === 'pdf') {
-    if (!payload.reportData) {
-      throw new Error('Missing report data for PDF export')
-    }
-    exportReportPdf(payload.reportData)
-    return
-  }
-  downloadExportPayload(payload)
+  password: string,
+): Promise<void> {
+  return downloadPasswordProtectedExport(format, payload, password)
 }

@@ -130,7 +130,19 @@ curl -sI https://your-api.onrender.com/health | grep -i strict-transport-securit
 
 Frontend hosts (Vercel/Netlify) terminate TLS at the CDN; ensure `VITE_GRAPHQL_URL` uses `https://`.
 
+## KDPA / privacy baseline
+
+Before a Kenya production launch:
+
+- Publish **Privacy Policy** (`/privacy`) and **Terms of Service** (`/terms`) — included in the app.
+- Confirm **ODPC registration** (data controller / processor) with qualified counsel — see [docs/KDPA-COMPLIANCE.md](docs/KDPA-COMPLIANCE.md) for a self-assessment and erasure runbook.
+- Ensure agents understand they need **lawful basis / consent** before uploading client contacts (Terms §2).
+### Export confidentiality
+
+Reports and contact exports download as **AES-encrypted ZIP** files. The user re-enters their **Propel CRM account password** at export time (verified server-side against the bcrypt hash; the password is not stored for exports). The same password opens the ZIP locally.
+
 ## Related docs
 
+- KDPA baseline & erasure plan: [docs/KDPA-COMPLIANCE.md](docs/KDPA-COMPLIANCE.md)
 - API setup: [server/README.md](server/README.md)
 - Frontend: [README.md](README.md)

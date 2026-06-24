@@ -2,6 +2,7 @@ import { Types } from 'mongoose'
 import { Contact, FollowUp, Interaction } from '../../models/index.js'
 import { buildContactSearchFilter } from '../contacts/contact-search.js'
 import { auditService } from '../audit/audit.service.js'
+import { authService } from '../auth/auth.service.js'
 import { isSuperAdmin } from '../../middleware/rbac.js'
 import { rowsToCsv } from '../../utils/csv-escape.js'
 import { endOfDay, startOfDay } from '../../utils/helpers.js'
@@ -354,6 +355,8 @@ export const exportService = {
     meta: ExportMeta,
   ): Promise<ExportPayload> {
     const data = parseInput(exportContactsSchema, input)
+    await authService.verifyPassword(user.id, data.exportPassword)
+
     const filter = buildContactSearchFilter(user, data.search)
     applyDateRangeFilter(filter, data.dateFrom, data.dateTo)
 
@@ -383,6 +386,8 @@ export const exportService = {
     meta: ExportMeta,
   ): Promise<ExportPayload> {
     const data = parseInput(exportReportSchema, input)
+    await authService.verifyPassword(user.id, data.exportPassword)
+
     const bundle = await gatherReportExportData(user, data.period, data.dateFrom, data.dateTo)
 
     const scope = {
