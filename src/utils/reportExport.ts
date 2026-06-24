@@ -14,11 +14,18 @@ export interface ReportExportData {
   mostActiveDay: string
 }
 
-function escapeCsv(value: string): string {
-  if (/[",\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`
+const CSV_FORMULA_PREFIX = /^[=+\-@\t\r]/
+
+/** Neutralizes spreadsheet formula injection and escapes CSV special characters. */
+export function escapeCsv(value: string): string {
+  let safe = value
+  if (CSV_FORMULA_PREFIX.test(safe)) {
+    safe = `'${safe}`
   }
-  return value
+  if (/[",\n]/.test(safe)) {
+    return `"${safe.replace(/"/g, '""')}"`
+  }
+  return safe
 }
 
 function downloadBlob(filename: string, blob: Blob): void {

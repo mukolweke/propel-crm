@@ -13,7 +13,8 @@
     "docker:reset": "docker compose down -v && docker compose up --build",
     "docker:seed": "docker compose exec api npm run seed",
     "docker:migrate": "docker compose exec api npm run db:migrate -- test propel-crm",
-    "docker:logs": "docker compose logs -f api web"
+    "docker:logs": "docker compose logs -f api web",
+    "test": "node --import tsx --test src/utils/reportExport.test.ts"
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.23",
@@ -31,6 +32,7 @@
     "@vitejs/plugin-vue": "^5.2.3",
     "@vue/tsconfig": "^0.7.0",
     "tailwindcss": "^4.1.7",
+    "tsx": "^4.19.4",
     "typescript": "~5.8.3",
     "vite": "^6.3.5",
     "vue-tsc": "^2.2.8"
