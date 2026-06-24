@@ -76,7 +76,7 @@ async function handleSubmit() {
           v-model="form.email"
           label="Email Address"
           type="email"
-          placeholder="agent@propel.re"
+          placeholder="you@company.com"
           :error="errors.email"
           uppercase-label
           variant="filled"
@@ -121,19 +121,6 @@ async function handleSubmit() {
           <ArrowRightIcon class="h-4 w-4" />
         </BaseButton>
       </form>
-
-      <div class="relative my-8">
-        <div class="absolute inset-0 flex items-center">
-          <div class="w-full border-t border-slate-200" />
-        </div>
-        <div class="relative flex justify-center text-xs uppercase tracking-wider">
-          <span class="bg-white px-3 text-slate-400">Or continue with</span>
-        </div>
-      </div>
-
-      <p class="text-center text-xs text-slate-400">
-        Demo: any email and password (6+ characters)
-      </p>
     </div>
   </div>
 </template>

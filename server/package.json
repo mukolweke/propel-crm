@@ -14,7 +14,7 @@
     "db:check-user": "tsx scripts/check-user.ts",
     "db:migrate": "tsx scripts/migrate-db.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/utils/normalize.test.ts src/modules/contacts/contact-duplicate.service.test.ts src/modules/contacts/contact-search.test.ts src/validators/createUserSchema.test.ts src/middleware/auth.middleware.test.ts"
+    "test": "node --import tsx --test src/utils/normalize.test.ts src/modules/contacts/contact-duplicate.service.test.ts src/modules/contacts/contact-search.test.ts src/validators/createUserSchema.test.ts src/middleware/auth.middleware.test.ts scripts/seed-config.test.ts"
   },
   "engines": {
     "node": ">=20"

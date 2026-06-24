@@ -22,17 +22,13 @@ cp .env.example .env
 # Edit .env with your MongoDB Atlas URI and JWT secrets
 
 npm install
-npm run seed    # optional — loads demo data
+# Bootstrap super admin — see ../DEPLOYMENT.md
+# export SEED_ADMIN_EMAIL=... SEED_ADMIN_PASSWORD=...
+npm run seed    # optional — creates super admin if missing
 npm run dev     # http://localhost:4000/graphql
 ```
 
-### Demo credentials (after seeding)
-
-| Email | Password |
-|-------|----------|
-| alex@propel.re | password123 |
-| sarah@propel.re | password123 |
-| michael@propel.re | password123 |
+See [DEPLOYMENT.md](../DEPLOYMENT.md) for bootstrap credentials (`SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`) and first-login password change flow.
 
 ## Project structure
 
@@ -57,9 +53,10 @@ src/
 
 ```graphql
 mutation Login {
-  login(input: { email: "alex@propel.re", password: "password123" }) {
+  login(input: { email: "your-email@example.com", password: "your-password" }) {
     accessToken
     refreshToken
+    mustChangePassword
     user { id fullName email role }
   }
 }
@@ -130,7 +127,7 @@ docker run -p 4000:4000 --env-file .env propel-crm-api
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Compile TypeScript |
 | `npm start` | Production server |
-| `npm run seed` | Load demo data |
+| `npm run seed` | Create super admin if missing (requires `SEED_ADMIN_*` env — see DEPLOYMENT.md) |
 | `npm run typecheck` | Type check only |
 
 ## Scaling notes (future)

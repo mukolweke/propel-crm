@@ -19,7 +19,12 @@ async function checkDatabase(uri: string, label: string, email: string) {
 }
 
 async function main() {
-  const email = process.argv[2] ?? 'mukolwesofts@gmail.com'
+  const email = process.argv[2] ?? process.env.SEED_ADMIN_EMAIL?.trim()
+  if (!email) {
+    console.error('Usage: npm run db:check-user -- <email>')
+    console.error('Or set SEED_ADMIN_EMAIL in the environment.')
+    process.exit(1)
+  }
   const uri = env.MONGODB_URI
 
   console.log('configured uri db:', uri.split('/').pop()?.split('?')[0])

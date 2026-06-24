@@ -13,9 +13,7 @@ import {
 import { logger } from '../src/utils/logger.js'
 import { BCRYPT_ROUNDS } from '../src/utils/password.js'
 import { env } from '../src/config/env.js'
-
-const ADMIN_EMAIL = 'mukolwesofts@gmail.com'
-const ADMIN_PASSWORD = 'ChangeMe@12345'
+import { resolveSeedAdminConfig, SeedConfigError } from './seed-config.js'
 
 async function wipeAllAppData() {
   logger.warn('Wiping all application collections…')
@@ -31,11 +29,11 @@ async function wipeAllAppData() {
   ])
 }
 
-async function createSuperAdmin() {
-  const password = await bcrypt.hash(ADMIN_PASSWORD, BCRYPT_ROUNDS)
+async function createSuperAdmin(email: string, plainPassword: string) {
+  const password = await bcrypt.hash(plainPassword, BCRYPT_ROUNDS)
   await User.create({
     fullName: 'System Administrator',
-    email: ADMIN_EMAIL,
+    email,
     password,
     role: 'super_admin',
     mustChangePassword: true,
@@ -47,20 +45,31 @@ async function createSuperAdmin() {
       sharedListUpdates: false,
     },
   })
-  logger.info('Super admin created: admin@system.local (change password on first login)')
+  logger.info('Super admin created (must change password on first login)', { email })
 }
 
-async function seedAdminIfMissing() {
-  const existing = await User.findOne({ email: ADMIN_EMAIL })
+async function seedAdminIfMissing(email: string, plainPassword: string) {
+  const existing = await User.findOne({ email })
   if (existing) {
-    logger.info('Super admin already exists — no changes made')
+    logger.info('Super admin already exists — no changes made', { email })
     return
   }
-  logger.info('Creating super admin…')
-  await createSuperAdmin()
+  logger.info('Creating super admin…', { email })
+  await createSuperAdmin(email, plainPassword)
 }
 
 async function main() {
+  let seedConfig: { email: string; password: string }
+  try {
+    seedConfig = resolveSeedAdminConfig()
+  } catch (err) {
+    if (err instanceof SeedConfigError) {
+      logger.error(err.message)
+      process.exit(1)
+    }
+    throw err
+  }
+
   if (env.NODE_ENV === 'production' && process.env.SEED_CONFIRM !== 'yes') {
     logger.error('Refusing to seed in production without SEED_CONFIRM=yes')
     process.exit(1)
@@ -68,9 +77,11 @@ async function main() {
 
   await connectDatabase()
 
+  const { email, password } = seedConfig
+
   if (process.env.RESET_DB === 'yes') {
     await wipeAllAppData()
-    await createSuperAdmin()
+    await createSuperAdmin(email, password)
   } else if (process.env.CLEAR_DEMO === 'yes') {
     await Promise.all([
       Contact.deleteMany({}),
@@ -80,12 +91,12 @@ async function main() {
       ReportSnapshot.deleteMany({}),
       RefreshToken.deleteMany({}),
       AuditLog.deleteMany({}),
-      User.deleteMany({ email: { $ne: ADMIN_EMAIL } }),
+      User.deleteMany({ email: { $ne: email } }),
     ])
-    logger.info('Demo data cleared (users except super admin)')
-    await seedAdminIfMissing()
+    logger.info('Demo data cleared (users except super admin)', { email })
+    await seedAdminIfMissing(email, password)
   } else {
-    await seedAdminIfMissing()
+    await seedAdminIfMissing(email, password)
   }
 
   await disconnectDatabase()

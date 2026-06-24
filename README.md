@@ -34,9 +34,11 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173)
 
-### Demo Login
+### Login
 
-Use any valid email and a password with 6+ characters.
+Sign in with credentials provided by your administrator. New accounts must change their password on first login.
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for bootstrapping a new environment.
 
 ## Project Structure
 
