@@ -261,7 +261,6 @@ input CreateUserInput {
   fullName: String!
   email: String!
   password: String!
-  role: UserRole
 }
 
 input ContactInput {

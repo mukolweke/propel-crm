@@ -218,7 +218,7 @@ export const authService = {
       fullName: data.fullName,
       email: data.email,
       password,
-      role: data.role,
+      role: 'user',
       mustChangePassword: true,
       isActive: true,
     })

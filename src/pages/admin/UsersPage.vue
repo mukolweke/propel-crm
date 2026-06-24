@@ -118,7 +118,6 @@ async function handleCreate() {
           fullName: form.fullName.trim(),
           email: form.email.trim().toLowerCase(),
           password: form.password,
-          role: 'user',
         },
       },
       authStore.token,

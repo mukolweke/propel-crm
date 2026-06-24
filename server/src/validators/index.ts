@@ -68,12 +68,29 @@ export const resetPasswordSchema = z.object({
   newPassword: passwordSchema,
 })
 
-export const createUserSchema = z.object({
-  fullName: z.string().min(2).max(100).transform((v) => sanitizeString(v, 100)),
-  email: emailSchema,
-  password: passwordSchema,
-  role: z.enum(['super_admin', 'user']).default('user'),
-})
+export const createUserSchema = z
+  .object({
+    fullName: z.string().min(2).max(100).transform((v) => sanitizeString(v, 100)),
+    email: emailSchema,
+    password: passwordSchema,
+    role: z.string().optional(),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    if (data.role !== undefined && data.role !== 'user') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Unknown role: ${data.role}`,
+        path: ['role'],
+      })
+    }
+  })
+  .transform((data) => ({
+    fullName: data.fullName,
+    email: data.email,
+    password: data.password,
+    role: 'user' as const,
+  }))
 
 const notificationSettingsInputSchema = z.object({
   emailAlerts: z.boolean().optional(),
