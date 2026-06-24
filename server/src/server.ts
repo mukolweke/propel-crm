@@ -3,6 +3,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 import cookieParser from 'cookie-parser'
 import rateLimit from 'express-rate-limit'
+import mongoSanitize from 'express-mongo-sanitize'
 import depthLimit from 'graphql-depth-limit'
 import { fileURLToPath } from 'node:url'
 import { ApolloServer } from '@apollo/server'
@@ -93,6 +94,7 @@ export async function createApp() {
     '/graphql',
     cors<cors.CorsRequest>({ origin: corsOrigins, credentials: true }),
     express.json({ limit: '512kb' }),
+    mongoSanitize(),
     (req, res, next) => {
       try {
         assertValidCsrf(req)

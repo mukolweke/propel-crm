@@ -14,7 +14,7 @@
     "db:check-user": "tsx scripts/check-user.ts",
     "db:migrate": "tsx scripts/migrate-db.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/utils/normalize.test.ts src/modules/contacts/contact-duplicate.service.test.ts src/modules/contacts/contact-duplicate-exclude.test.ts src/modules/contacts/contact-search.test.ts src/modules/audit/audit-query.test.ts src/validators/createUserSchema.test.ts src/middleware/auth.middleware.test.ts scripts/seed-config.test.ts src/utils/auth-cookies.test.ts src/middleware/auth-cookie-flow.test.ts src/middleware/https.test.ts src/middleware/query-scope.test.ts src/middleware/authorization.report.test.ts src/modules/contacts/contact-access-scope.test.ts src/modules/auth/auth-password-reset-enumeration.test.ts src/modules/export/export.service.test.ts src/modules/reports/report-access.test.ts"
+    "test": "node --import tsx --test src/utils/normalize.test.ts src/modules/contacts/contact-duplicate.service.test.ts src/modules/contacts/contact-duplicate-exclude.test.ts src/modules/contacts/contact-search.test.ts src/modules/audit/audit-query.test.ts src/validators/createUserSchema.test.ts src/middleware/auth.middleware.test.ts scripts/seed-config.test.ts src/utils/auth-cookies.test.ts src/middleware/auth-cookie-flow.test.ts src/middleware/mongo-sanitize.test.ts src/middleware/https.test.ts src/middleware/query-scope.test.ts src/middleware/authorization.report.test.ts src/modules/contacts/contact-access-scope.test.ts src/modules/auth/auth-password-reset-enumeration.test.ts src/modules/export/export.service.test.ts src/modules/reports/report-access.test.ts"
   },
   "engines": {
     "node": ">=20"
@@ -26,6 +26,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^4.21.2",
+    "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^7.5.0",
     "graphql": "^16.10.0",
     "graphql-depth-limit": "^1.1.0",
