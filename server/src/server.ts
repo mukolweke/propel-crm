@@ -13,6 +13,7 @@ import { env, corsOrigins, isProduction } from './config/env.js'
 import { typeDefs, resolvers } from './graphql/resolvers/index.js'
 import { buildContext } from './middleware/auth.js'
 import { assertValidCsrf } from './middleware/csrf.js'
+import { createGraphqlMutationRateLimitMiddleware } from './middleware/graphql-mutation-rate-limit.js'
 import { enforceHttps } from './middleware/https.js'
 import { logger } from './utils/logger.js'
 import { AppError } from './utils/errors.js'
@@ -39,14 +40,6 @@ export async function createApp() {
 
   app.use(cookieParser())
 
-  const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: isProduction ? 20 : 500,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests. Please try again later.' },
-  })
-
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: isProduction ? 120 : 1000,
@@ -54,6 +47,8 @@ export async function createApp() {
     legacyHeaders: false,
     message: { error: 'Too many requests. Please try again later.' },
   })
+
+  const mutationRateLimiters = createGraphqlMutationRateLimitMiddleware()
 
   const server = new ApolloServer({
     typeDefs,
@@ -88,13 +83,14 @@ export async function createApp() {
     res.json({ status: 'ok', service: 'propel-crm-api', timestamp: new Date().toISOString() })
   })
 
-  app.use('/graphql', loginLimiter, apiLimiter)
+  app.use('/graphql', apiLimiter)
 
   app.use(
     '/graphql',
     cors<cors.CorsRequest>({ origin: corsOrigins, credentials: true }),
     express.json({ limit: '512kb' }),
     mongoSanitize(),
+    ...mutationRateLimiters,
     (req, res, next) => {
       try {
         assertValidCsrf(req)
