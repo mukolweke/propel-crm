@@ -344,6 +344,7 @@ input ShareInput {
 input AuditLogFilterInput {
   action: String
   entityType: String
+  search: String
   performedBy: ID
   from: DateTime
   to: DateTime

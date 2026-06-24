@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { graphqlRequest } from '@/services/graphql'
+import { graphqlRequest, getErrorMessage } from '@/services/graphql'
+import { useToast } from '@/composables/useToast'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
 
+const toast = useToast()
 const loading = ref(true)
 const logs = ref<Array<Record<string, unknown>>>([])
+const total = ref(0)
 
 const filters = reactive({
+  search: '',
   action: '',
   entityType: '',
 })
@@ -30,22 +34,35 @@ async function fetchLogs() {
   loading.value = true
   try {
     const data = await graphqlRequest<{
-      auditLogs: { items: Array<Record<string, unknown>> }
+      auditLogs: { items: Array<Record<string, unknown>>; total: number }
     }>(
       QUERY,
       {
         filter: {
-          action: filters.action || undefined,
-          entityType: filters.entityType || undefined,
+          search: filters.search.trim() || undefined,
+          action: filters.action.trim() || undefined,
+          entityType: filters.entityType.trim() || undefined,
           page: 1,
           pageSize: 50,
         },
       },
     )
     logs.value = data.auditLogs.items
+    total.value = data.auditLogs.total
+  } catch (err) {
+    toast.error('Audit log search failed', getErrorMessage(err))
+    logs.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
+}
+
+function clearFilters() {
+  filters.search = ''
+  filters.action = ''
+  filters.entityType = ''
+  void fetchLogs()
 }
 
 onMounted(fetchLogs)
@@ -59,11 +76,32 @@ onMounted(fetchLogs)
     </div>
 
     <BaseCard>
-      <div class="mb-6 flex flex-wrap gap-3">
-        <BaseInput v-model="filters.action" placeholder="Filter by action" class="max-w-xs" />
-        <BaseInput v-model="filters.entityType" placeholder="Filter by entity type" class="max-w-xs" />
-        <BaseButton variant="outline" @click="fetchLogs">Search</BaseButton>
-      </div>
+      <form class="mb-6 flex flex-wrap gap-3" @submit.prevent="fetchLogs">
+        <BaseInput
+          v-model="filters.search"
+          placeholder="Search action, entity, or IP..."
+          class="max-w-sm"
+          maxlength="200"
+        />
+        <BaseInput
+          v-model="filters.action"
+          placeholder="Filter by action (e.g. LOGIN)"
+          class="max-w-xs"
+          maxlength="200"
+        />
+        <BaseInput
+          v-model="filters.entityType"
+          placeholder="Filter by entity (e.g. CONTACT)"
+          class="max-w-xs"
+          maxlength="200"
+        />
+        <BaseButton type="submit" variant="outline">Search</BaseButton>
+        <BaseButton type="button" variant="ghost" @click="clearFilters">Clear</BaseButton>
+      </form>
+
+      <p v-if="!loading && total" class="mb-4 text-sm text-slate-500">
+        {{ total }} log{{ total === 1 ? '' : 's' }} found
+      </p>
 
       <SkeletonLoader v-if="loading" />
       <div v-else class="space-y-3">

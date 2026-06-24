@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildContactSearchFilter } from './contact-search.js'
+import { buildContactSearchFilter, normalizeContactSearch } from './contact-search.js'
+import { contactSearchSchema, parseInput } from '../../validators/index.js'
+import { AppError } from '../../utils/errors.js'
 import type { AuthUser } from '../../types/index.js'
 
 const agent: AuthUser = {
@@ -41,5 +43,24 @@ describe('buildContactSearchFilter', () => {
     const filter = buildContactSearchFilter(admin, 'test')
     assert.equal(filter.ownerId, undefined)
     assert.ok(filter.$or)
+  })
+
+  it('strips a leading mongo operator via sanitizeSearchQuery', () => {
+    assert.equal(normalizeContactSearch('$regex'), 'regex')
+    const filter = buildContactSearchFilter(agent, normalizeContactSearch('$where'))
+    const fullName = (filter.$or as Record<string, unknown>[])[0]?.fullName as RegExp
+    assert.equal(fullName.source, 'where')
+  })
+
+  it('rejects search queries longer than 200 characters', () => {
+    assert.throws(
+      () => parseInput(contactSearchSchema, { search: 'a'.repeat(201) }),
+      (err: unknown) => err instanceof AppError && err.code === 'VALIDATION_ERROR',
+    )
+  })
+
+  it('leaves normal search terms unchanged', () => {
+    assert.equal(normalizeContactSearch('0712345678'), '0712345678')
+    assert.equal(normalizeContactSearch('John@Email.COM'), 'John@Email.COM')
   })
 })

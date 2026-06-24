@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { AppError } from '../utils/errors.js'
 import { passwordSchema } from '../utils/password.js'
-import { sanitizeString } from '../utils/sanitize.js'
+import { sanitizeString, sanitizeSearchQuery } from '../utils/sanitize.js'
 import { normalizeEmail } from '../utils/normalize.js'
 import { objectIdSchema } from '../utils/objectId.js'
 
@@ -158,8 +158,22 @@ const dateOnlySchema = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD')
   .optional()
 
+const contactSearchQuerySchema = z
+  .string()
+  .max(200, 'Search query must be at most 200 characters')
+  .optional()
+  .transform((value) => {
+    if (!value?.trim()) return undefined
+    const cleaned = sanitizeSearchQuery(value)
+    return cleaned || undefined
+  })
+
+export const contactSearchSchema = z.object({
+  search: contactSearchQuerySchema,
+})
+
 export const exportContactsSchema = z.object({
-  search: z.string().max(200).optional().transform((v) => (v ? sanitizeString(v, 200) : undefined)),
+  search: contactSearchQuerySchema,
   dateFrom: dateOnlySchema,
   dateTo: dateOnlySchema,
 })
@@ -171,9 +185,20 @@ export const exportReportSchema = z.object({
   dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dateTo must be YYYY-MM-DD'),
 })
 
+const auditTextFilterSchema = z
+  .string()
+  .max(200, 'Search query must be at most 200 characters')
+  .optional()
+  .transform((value) => {
+    if (!value?.trim()) return undefined
+    const cleaned = sanitizeSearchQuery(value)
+    return cleaned || undefined
+  })
+
 export const auditLogFilterSchema = z.object({
-  action: z.string().optional(),
-  entityType: z.string().optional(),
+  action: auditTextFilterSchema,
+  entityType: auditTextFilterSchema,
+  search: auditTextFilterSchema,
   performedBy: objectIdSchema.optional(),
   from: z.string().optional(),
   to: z.string().optional(),

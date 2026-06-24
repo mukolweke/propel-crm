@@ -29,6 +29,19 @@ const unreadCount = computed(
 
 const userInitials = computed(() => getInitials(authStore.user?.name ?? 'User'))
 
+function submitGlobalSearch() {
+  const query = searchQuery.value.trim().slice(0, 200)
+  if (!query) return
+  router.push({ path: '/contacts', query: { search: query } })
+}
+
+function onGlobalSearchKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    submitGlobalSearch()
+  }
+}
+
 function logout() {
   authStore.logout().then(() => router.push({ name: 'login' }))
 }
@@ -55,8 +68,10 @@ function logout() {
         <input
           v-model="searchQuery"
           type="search"
+          maxlength="200"
           placeholder="Search leads or properties..."
           class="w-full rounded-full border border-slate-200 bg-mint py-2.5 pl-11 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          @keydown="onGlobalSearchKeydown"
         />
       </div>
 

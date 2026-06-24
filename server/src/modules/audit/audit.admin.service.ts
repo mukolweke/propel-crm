@@ -1,22 +1,14 @@
 import { AuditLog } from '../../models/index.js'
 import { assertSuperAdmin } from '../../middleware/rbac.js'
 import { parseInput, auditLogFilterSchema } from '../../validators/index.js'
+import { buildAuditLogQuery } from './audit-query.js'
 import type { AuthUser, PaginatedResult } from '../../types/index.js'
 
 export const auditAdminService = {
   async listLogs(user: AuthUser, filters: unknown): Promise<PaginatedResult<Record<string, unknown>>> {
     assertSuperAdmin(user)
     const data = parseInput(auditLogFilterSchema, filters)
-
-    const query: Record<string, unknown> = {}
-    if (data.action) query.action = data.action
-    if (data.entityType) query.entityType = data.entityType
-    if (data.performedBy) query.performedBy = data.performedBy
-    if (data.from || data.to) {
-      query.createdAt = {}
-      if (data.from) (query.createdAt as Record<string, Date>).$gte = new Date(data.from)
-      if (data.to) (query.createdAt as Record<string, Date>).$lte = new Date(data.to)
-    }
+    const query = buildAuditLogQuery(data)
 
     const page = data.page ?? 1
     const pageSize = data.pageSize ?? 20

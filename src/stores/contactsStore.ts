@@ -25,17 +25,6 @@ export const useContactsStore = defineStore('contacts', () => {
   const filteredContacts = computed(() => {
     let result = [...contacts.value]
 
-    if (filters.value.search) {
-      const q = filters.value.search.toLowerCase()
-      result = result.filter(
-        (c) =>
-          c.fullName.toLowerCase().includes(q) ||
-          c.email.toLowerCase().includes(q) ||
-          c.phone.includes(q) ||
-          c.propertyType.toLowerCase().includes(q),
-      )
-    }
-
     if (filters.value.status !== 'all') {
       result = result.filter((c) => c.status === filters.value.status)
     }
@@ -103,6 +92,18 @@ export const useContactsStore = defineStore('contacts', () => {
   function setFilters(partial: Partial<ContactFilters>) {
     filters.value = { ...filters.value, ...partial }
     page.value = 1
+    if ('search' in partial) {
+      scheduleSearchFetch()
+    }
+  }
+
+  let searchFetchTimer: ReturnType<typeof setTimeout> | undefined
+
+  function scheduleSearchFetch() {
+    clearTimeout(searchFetchTimer)
+    searchFetchTimer = setTimeout(() => {
+      void fetchContacts()
+    }, 300)
   }
 
   function setPage(p: number) {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useContactsStore } from '@/stores/contactsStore'
 import { useConfirm } from '@/composables/useConfirm'
 import { useToast } from '@/composables/useToast'
@@ -32,6 +32,7 @@ import {
 } from '@heroicons/vue/24/outline'
 
 const router = useRouter()
+const route = useRoute()
 const contactsStore = useContactsStore()
 const { confirm } = useConfirm()
 const toast = useToast()
@@ -49,7 +50,14 @@ const periodFilters = [
   { value: 'pending_follow_up', label: 'Follow Up Needed' },
 ] as const
 
-onMounted(() => contactsStore.fetchContacts())
+onMounted(() => {
+  const initialSearch = typeof route.query.search === 'string' ? route.query.search : ''
+  if (initialSearch) {
+    contactsStore.setFilters({ search: initialSearch.slice(0, 200) })
+  } else {
+    void contactsStore.fetchContacts()
+  }
+})
 
 async function handleDelete(id: string, name: string) {
   const ok = await confirm({
@@ -103,6 +111,7 @@ async function handleDelete(id: string, name: string) {
           <input
             :value="contactsStore.filters.search"
             type="search"
+            maxlength="200"
             placeholder="Search contacts or leads..."
             class="w-full rounded-full border border-slate-200 bg-mint px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 xl:w-72"
             @input="contactsStore.setFilters({ search: ($event.target as HTMLInputElement).value })"

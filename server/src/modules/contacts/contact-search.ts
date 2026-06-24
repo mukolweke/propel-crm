@@ -3,6 +3,11 @@ import { notDeletedFilter } from '../../models/Contact.js'
 import type { AuthUser } from '../../types/index.js'
 import { isSuperAdmin } from '../../middleware/rbac.js'
 import { Contact } from '../../models/index.js'
+import { contactSearchSchema, parseInput } from '../../validators/index.js'
+
+export function normalizeContactSearch(search?: string): string | undefined {
+  return parseInput(contactSearchSchema, { search }).search
+}
 
 export function buildContactSearchFilter(
   user: AuthUser,
@@ -12,12 +17,11 @@ export function buildContactSearchFilter(
     ? { ...notDeletedFilter }
     : { ownerId: user.id, ...notDeletedFilter }
 
-  const trimmed = search?.trim()
-  if (!trimmed) return baseFilter
+  if (!search) return baseFilter
 
-  const phoneNormalized = normalizePhone(trimmed)
-  const emailNormalized = normalizeEmail(trimmed)
-  const regex = new RegExp(escapeRegex(trimmed), 'i')
+  const phoneNormalized = normalizePhone(search)
+  const emailNormalized = normalizeEmail(search)
+  const regex = new RegExp(escapeRegex(search), 'i')
 
   const orConditions: Record<string, unknown>[] = [
     { fullName: regex },
@@ -37,6 +41,7 @@ export function buildContactSearchFilter(
 }
 
 export async function searchContacts(user: AuthUser, search?: string) {
-  const filter = buildContactSearchFilter(user, search)
+  const safeSearch = normalizeContactSearch(search)
+  const filter = buildContactSearchFilter(user, safeSearch)
   return Contact.find(filter).sort({ updatedAt: -1 })
 }
