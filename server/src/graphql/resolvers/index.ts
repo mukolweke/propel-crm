@@ -67,10 +67,17 @@ export const resolvers = {
       return mapUser(user)
     },
 
-    myContacts: async (_: unknown, { search }: { search?: string }, ctx: GraphQLContext) => {
+    myContacts: async (
+      _: unknown,
+      { search, page, pageSize }: { search?: string; page?: number; pageSize?: number },
+      ctx: GraphQLContext,
+    ) => {
       const user = requireAppAccess(ctx)
-      const contacts = await contactService.myContacts(user, search)
-      return contacts.map(mapContact)
+      const result = await contactService.myContacts(user, { search, page, pageSize })
+      return {
+        ...result,
+        items: result.items.map(mapContact),
+      }
     },
 
     reportableContacts: async (_: unknown, __: unknown, ctx: GraphQLContext) => {

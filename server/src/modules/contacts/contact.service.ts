@@ -15,7 +15,7 @@ import { parseInput, contactInputSchema, contactUpdateSchema } from '../../valid
 import { maskPhone, sanitizeMetadata } from '../../utils/sanitize.js'
 import { auditService } from '../audit/audit.service.js'
 import { assertNoDuplicateContact, checkContactDuplicate } from './contact-duplicate.service.js'
-import { searchContacts } from './contact-search.js'
+import { searchContactsPaginated } from './contact-search.js'
 import { findReportableContacts } from '../reports/report-access.js'
 import type { AuthUser, PaginatedResult } from '../../types/index.js'
 
@@ -30,8 +30,11 @@ async function getContactForUser(user: AuthUser, contactId: string, mode: Contac
 }
 
 export const contactService = {
-  async myContacts(user: AuthUser, search?: string) {
-    return searchContacts(user, search)
+  async myContacts(
+    user: AuthUser,
+    options: { search?: string; page?: number; pageSize?: number } = {},
+  ) {
+    return searchContactsPaginated(user, options)
   },
 
   async reportableContacts(user: AuthUser) {

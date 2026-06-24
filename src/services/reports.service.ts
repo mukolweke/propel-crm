@@ -78,17 +78,6 @@ const REPORTS_QUERY = `
       contactId
       createdAt
     }
-    myContacts {
-      id
-      fullName
-      propertyInterest
-      budgetRange
-      leadSource
-      status
-      isConverted
-      createdAt
-      updatedAt
-    }
     reportableContacts {
       id
       fullName
@@ -277,7 +266,6 @@ export const reportsService = {
       dailyReport: DailyReport
       monthlyReport: MonthlyReport
       interactions: { id: string; contactId: string; createdAt: string }[]
-      myContacts: Parameters<typeof mapApiContact>[0][]
       reportableContacts: Parameters<typeof mapApiContact>[0][]
     }>(
       REPORTS_QUERY,

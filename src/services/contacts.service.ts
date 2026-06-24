@@ -1,4 +1,4 @@
-import type { Contact, ContactFormData, ContactStatus } from '@/types'
+import type { Contact, ContactFormData, ContactStatus, PaginatedResult } from '@/types'
 import { graphqlRequest } from './graphql'
 
 interface ApiContact {
@@ -40,9 +40,15 @@ const CONTACT_FIELDS = `
 `
 
 const MY_CONTACTS_QUERY = `
-  query MyContacts($search: String) {
-    myContacts(search: $search) {
-      ${CONTACT_FIELDS}
+  query MyContacts($search: String, $page: Int, $pageSize: Int) {
+    myContacts(search: $search, page: $page, pageSize: $pageSize) {
+      items {
+        ${CONTACT_FIELDS}
+      }
+      total
+      page
+      pageSize
+      totalPages
     }
   }
 `
@@ -123,12 +129,31 @@ function toApiInput(data: ContactFormData) {
 }
 
 export const contactsService = {
-  async fetchContacts(search?: string): Promise<Contact[]> {
-    const data = await graphqlRequest<{ myContacts: ApiContact[] }>(
-      MY_CONTACTS_QUERY,
-      { search: search?.trim() || undefined },
-    )
-    return data.myContacts.map(mapApiContact)
+  async fetchContacts(options: {
+    search?: string
+    page?: number
+    pageSize?: number
+  } = {}): Promise<PaginatedResult<Contact>> {
+    const data = await graphqlRequest<{
+      myContacts: {
+        items: ApiContact[]
+        total: number
+        page: number
+        pageSize: number
+        totalPages: number
+      }
+    }>(MY_CONTACTS_QUERY, {
+      search: options.search?.trim() || undefined,
+      page: options.page,
+      pageSize: options.pageSize,
+    })
+    return {
+      items: data.myContacts.items.map(mapApiContact),
+      total: data.myContacts.total,
+      page: data.myContacts.page,
+      pageSize: data.myContacts.pageSize,
+      totalPages: data.myContacts.totalPages,
+    }
   },
 
   async createContact(form: ContactFormData): Promise<Contact> {

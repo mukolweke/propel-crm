@@ -267,6 +267,7 @@ async function handleDelete(id: string, name: string) {
         :page="contactsStore.paginatedContacts.page"
         :total-pages="contactsStore.paginatedContacts.totalPages"
         :total="contactsStore.paginatedContacts.total"
+        :page-size="contactsStore.pageSize"
         @update:page="contactsStore.setPage"
       />
     </BaseCard>

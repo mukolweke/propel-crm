@@ -172,6 +172,12 @@ export const contactSearchSchema = z.object({
   search: contactSearchQuerySchema,
 })
 
+export const myContactsQuerySchema = z.object({
+  search: contactSearchQuerySchema,
+  page: z.coerce.number().min(1).default(1),
+  pageSize: z.coerce.number().min(1).max(100).default(20),
+})
+
 export const exportContactsSchema = z.object({
   search: contactSearchQuerySchema,
   dateFrom: dateOnlySchema,

@@ -221,6 +221,14 @@ type AuditLogEntry {
   timestamp: DateTime!
 }
 
+type PaginatedContacts {
+  items: [Contact!]!
+  total: Int!
+  page: Int!
+  pageSize: Int!
+  totalPages: Int!
+}
+
 type PaginatedUsers {
   items: [AdminUserRow!]!
   total: Int!
@@ -354,7 +362,7 @@ input AuditLogFilterInput {
 
 type Query {
   me: User
-  myContacts(search: String): [Contact!]!
+  myContacts(search: String, page: Int, pageSize: Int): PaginatedContacts!
   reportableContacts: [Contact!]!
   checkContactDuplicate(phone: String, email: String, excludeContactId: ID): ContactDuplicateInfo!
   contact(id: ID!): Contact

@@ -20,6 +20,8 @@ export const useContactsStore = defineStore('contacts', () => {
   const filters = ref<ContactFilters>(defaultFilters())
   const page = ref(1)
   const pageSize = ref(10)
+  const total = ref(0)
+  const totalPages = ref(1)
   const viewMode = ref<'table' | 'grid'>('table')
 
   const filteredContacts = computed(() => {
@@ -60,15 +62,26 @@ export const useContactsStore = defineStore('contacts', () => {
   })
 
   const paginatedContacts = computed<PaginatedResult<Contact>>(() => {
-    const total = filteredContacts.value.length
-    const totalPages = Math.max(1, Math.ceil(total / pageSize.value))
+    const authStore = useAuthStore()
+    if (authStore.isSuperAdmin) {
+      return {
+        items: filteredContacts.value,
+        total: total.value,
+        page: page.value,
+        pageSize: pageSize.value,
+        totalPages: totalPages.value,
+      }
+    }
+
+    const filteredTotal = filteredContacts.value.length
+    const pages = Math.max(1, Math.ceil(filteredTotal / pageSize.value))
     const start = (page.value - 1) * pageSize.value
     return {
       items: filteredContacts.value.slice(start, start + pageSize.value),
-      total,
+      total: filteredTotal,
       page: page.value,
       pageSize: pageSize.value,
-      totalPages,
+      totalPages: pages,
     }
   })
 
@@ -78,9 +91,18 @@ export const useContactsStore = defineStore('contacts', () => {
 
     loading.value = true
     try {
-      contacts.value = await contactsService.fetchContacts(
-        filters.value.search || undefined,
-      )
+      const result = await contactsService.fetchContacts({
+        search: filters.value.search || undefined,
+        page: authStore.isSuperAdmin ? page.value : undefined,
+        pageSize: authStore.isSuperAdmin ? pageSize.value : undefined,
+      })
+      contacts.value = result.items
+      if (authStore.isSuperAdmin) {
+        total.value = result.total
+        totalPages.value = result.totalPages
+        page.value = result.page
+        pageSize.value = result.pageSize
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load contacts'
       useToast().error('Load failed', message)
@@ -108,6 +130,9 @@ export const useContactsStore = defineStore('contacts', () => {
 
   function setPage(p: number) {
     page.value = p
+    if (useAuthStore().isSuperAdmin) {
+      void fetchContacts()
+    }
   }
 
   function setViewMode(mode: 'table' | 'grid') {
@@ -169,6 +194,8 @@ export const useContactsStore = defineStore('contacts', () => {
     filters,
     page,
     pageSize,
+    total,
+    totalPages,
     viewMode,
     filteredContacts,
     paginatedContacts,
