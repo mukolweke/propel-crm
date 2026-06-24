@@ -46,11 +46,11 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function fetchSettings() {
     const authStore = useAuthStore()
-    if (!authStore.token) return
+    if (!authStore.isAuthenticated) return
 
     loading.value = true
     try {
-      const apiSettings = await settingsService.fetchMe(authStore.token)
+      const apiSettings = await settingsService.fetchMe()
       settings.value = {
         ...apiSettings,
         exportSettings: loadExportSettings(),
@@ -69,11 +69,11 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function saveProfile(profile: UserSettings['profile']) {
     const authStore = useAuthStore()
-    if (!authStore.token) return
+    if (!authStore.isAuthenticated) return
 
     saving.value = true
     try {
-      const updated = await settingsService.updateProfile(authStore.token, {
+      const updated = await settingsService.updateProfile({
         fullName: profile.name,
         phone: profile.phone,
         agency: profile.agency,
@@ -98,11 +98,11 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function saveNotifications(notifs: UserSettings['notifications']) {
     const authStore = useAuthStore()
-    if (!authStore.token) return
+    if (!authStore.isAuthenticated) return
 
     saving.value = true
     try {
-      const updated = await settingsService.updateProfile(authStore.token, {
+      const updated = await settingsService.updateProfile({
         notificationSettings: notifs,
       })
       settings.value.notifications = updated.notifications

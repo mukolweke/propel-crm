@@ -35,7 +35,7 @@ export const useInteractionStore = defineStore('interactions', () => {
 
   async function fetchInteractions() {
     const authStore = useAuthStore()
-    if (!authStore.token) return
+    if (!authStore.isAuthenticated) return
 
     const contactsStore = useContactsStore()
     if (contactsStore.contacts.length === 0) {
@@ -44,7 +44,7 @@ export const useInteractionStore = defineStore('interactions', () => {
 
     loading.value = true
     try {
-      const items = await interactionsService.fetchInteractions(authStore.token)
+      const items = await interactionsService.fetchInteractions()
       const names = contactNameMap()
       interactions.value = items.map((item) =>
         mapApiInteraction(item, names.get(item.contactId) ?? 'Unknown'),
@@ -59,13 +59,13 @@ export const useInteractionStore = defineStore('interactions', () => {
 
   async function logInteraction(data: InteractionFormData) {
     const authStore = useAuthStore()
-    if (!authStore.token) throw new Error('Not authenticated')
+    if (!authStore.isAuthenticated) throw new Error('Not authenticated')
 
     const contactsStore = useContactsStore()
     const contact = contactsStore.getContactById(data.contactId)
     if (!contact) throw new Error('Contact not found')
 
-    const created = await interactionsService.logInteraction(authStore.token, data)
+    const created = await interactionsService.logInteraction(data)
     const interaction = mapApiInteraction(created, contact.fullName)
     interactions.value.unshift(interaction)
 

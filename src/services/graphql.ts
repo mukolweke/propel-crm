@@ -1,4 +1,6 @@
-export const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_URL ?? 'http://localhost:4000/graphql'
+import { getCsrfToken } from '@/utils/csrf'
+
+export const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_URL ?? '/graphql'
 
 export interface GraphQLErrorItem {
   message: string
@@ -20,7 +22,7 @@ export class ApiError extends Error {
 }
 
 export interface GraphQLSessionHandler {
-  refresh: () => Promise<string | null>
+  refresh: () => Promise<boolean>
   onExpired: () => void | Promise<void>
 }
 
@@ -50,20 +52,23 @@ function isAuthError(code?: string, statusCode?: number): boolean {
 
 interface RequestOptions {
   retried?: boolean
+  /** When false, skip automatic session refresh (login, password reset, etc.). */
+  session?: boolean
 }
 
 async function executeGraphQLFetch(
   query: string,
   variables?: Record<string, unknown>,
-  token?: string | null,
 ): Promise<Response> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers.Authorization = `Bearer ${token}`
+  const csrf = getCsrfToken()
+  if (csrf) headers['X-CSRF-Token'] = csrf
 
   try {
     return await fetch(GRAPHQL_URL, {
       method: 'POST',
       headers,
+      credentials: 'include',
       body: JSON.stringify({ query, variables }),
     })
   } catch (error) {
@@ -79,6 +84,10 @@ async function parseGraphQLJson(response: Response): Promise<{
 
   if (response.status === 429) {
     throw new ApiError('Too many requests. Please wait a moment and try again.', 'RATE_LIMITED', 429)
+  }
+
+  if (response.status === 403) {
+    throw new ApiError('Request blocked for security reasons.', 'CSRF_INVALID', 403)
   }
 
   if (!text) {
@@ -112,10 +121,10 @@ function throwGraphQLError(err: GraphQLErrorItem): never {
 export async function graphqlRequest<T>(
   query: string,
   variables?: Record<string, unknown>,
-  token?: string | null,
   options: RequestOptions = {},
 ): Promise<T> {
-  const response = await executeGraphQLFetch(query, variables, token)
+  const useSession = options.session !== false
+  const response = await executeGraphQLFetch(query, variables)
   const json = await parseGraphQLJson(response)
 
   if (json.errors?.length) {
@@ -123,10 +132,10 @@ export async function graphqlRequest<T>(
     const code = err.extensions?.code
     const statusCode = err.extensions?.statusCode
 
-    if (token && !options.retried && sessionHandler && isAuthError(code, statusCode)) {
-      const newToken = await sessionHandler.refresh()
-      if (newToken) {
-        return graphqlRequest<T>(query, variables, newToken, { retried: true })
+    if (useSession && !options.retried && sessionHandler && isAuthError(code, statusCode)) {
+      const refreshed = await sessionHandler.refresh()
+      if (refreshed) {
+        return graphqlRequest<T>(query, variables, { ...options, retried: true, session: true })
       }
       await sessionHandler.onExpired()
       throw new ApiError('Your session has ended. Please sign in again.', 'SESSION_EXPIRED', 401)
@@ -146,26 +155,10 @@ export async function graphqlRequest<T>(
   return json.data as T
 }
 
-/** Raw GraphQL call without session refresh (used for login / refresh / password reset). */
+/** GraphQL call without automatic session refresh (login, refresh, password reset). */
 export async function graphqlRequestRaw<T>(
   query: string,
   variables?: Record<string, unknown>,
-  token?: string | null,
 ): Promise<T> {
-  const response = await executeGraphQLFetch(query, variables, token)
-  const json = await parseGraphQLJson(response)
-
-  if (json.errors?.length) {
-    throwGraphQLError(json.errors[0]!)
-  }
-
-  if (!response.ok) {
-    throw new ApiError(`Request failed (${response.status})`, 'NETWORK_ERROR', response.status)
-  }
-
-  if (!json.data) {
-    throw new ApiError('No data returned', 'EMPTY_RESPONSE')
-  }
-
-  return json.data as T
+  return graphqlRequest<T>(query, variables, { session: false })
 }

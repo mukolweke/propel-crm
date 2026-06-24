@@ -60,6 +60,8 @@ export interface GraphQLContext {
   user: AuthUser | null
   ip?: string
   userAgent?: string
+  req?: import('express').Request
+  res?: import('express').Response
 }
 
 export interface TokenPair {

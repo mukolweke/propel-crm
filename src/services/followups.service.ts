@@ -77,12 +77,12 @@ function mergeFollowUps(...lists: ApiFollowUp[][]): ApiFollowUp[] {
 }
 
 export const followUpsService = {
-  async fetchFollowUps(token: string, days = 30): Promise<ApiFollowUp[]> {
+  async fetchFollowUps(days = 30): Promise<ApiFollowUp[]> {
     const data = await graphqlRequest<{
       overdueFollowUps: ApiFollowUp[]
       todayFollowUps: ApiFollowUp[]
       upcomingFollowUps: ApiFollowUp[]
-    }>(FOLLOW_UPS_QUERY, { days }, token)
+    }>(FOLLOW_UPS_QUERY, { days })
 
     return mergeFollowUps(
       data.overdueFollowUps,
@@ -91,20 +91,15 @@ export const followUpsService = {
     )
   },
 
-  async completeFollowUp(token: string, id: string): Promise<ApiFollowUp> {
-    const data = await graphqlRequest<{ completeFollowUp: ApiFollowUp }>(
-      COMPLETE_FOLLOW_UP,
-      { id },
-      token,
-    )
+  async completeFollowUp(id: string): Promise<ApiFollowUp> {
+    const data = await graphqlRequest<{ completeFollowUp: ApiFollowUp }>(COMPLETE_FOLLOW_UP, { id })
     return data.completeFollowUp
   },
 
-  async rescheduleFollowUp(token: string, id: string, scheduledDate: string): Promise<ApiFollowUp> {
+  async rescheduleFollowUp(id: string, scheduledDate: string): Promise<ApiFollowUp> {
     const data = await graphqlRequest<{ rescheduleFollowUp: ApiFollowUp }>(
       RESCHEDULE_FOLLOW_UP,
       { id, scheduledDate },
-      token,
     )
     return data.rescheduleFollowUp
   },

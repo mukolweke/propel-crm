@@ -27,7 +27,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   async function fetchDashboard() {
     const authStore = useAuthStore()
-    if (!authStore.token) return
+    if (!authStore.isAuthenticated) return
 
     const contactsStore = useContactsStore()
     loading.value = true
@@ -36,7 +36,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
         await contactsStore.fetchContacts()
       }
 
-      const data = await dashboardService.fetchDashboard(authStore.token)
+      const data = await dashboardService.fetchDashboard()
       const contactNames = new Map(contactsStore.contacts.map((c) => [c.id, c.fullName]))
 
       kpiData.value = {

@@ -1,5 +1,6 @@
 import { describe, it, before, after } from 'node:test'
 import assert from 'node:assert/strict'
+import type { Request } from 'express'
 import bcrypt from 'bcryptjs'
 import { env } from '../config/env.js'
 import { connectDatabase, disconnectDatabase } from '../config/database.js'
@@ -10,6 +11,15 @@ import { assertAuthenticated } from '../utils/errors.js'
 import { BCRYPT_ROUNDS } from '../utils/password.js'
 
 const TEST_EMAIL = `auth-middleware-test-${Date.now()}@example.com`
+
+function mockRequest(overrides: Partial<Request> = {}): Request {
+  return {
+    headers: {},
+    cookies: {},
+    ip: '127.0.0.1',
+    ...overrides,
+  } as Request
+}
 
 describe('auth middleware — live DB revalidation', { skip: !env.MONGODB_URI }, () => {
   let userId: string
@@ -41,7 +51,9 @@ describe('auth middleware — live DB revalidation', { skip: !env.MONGODB_URI },
       mustChangePassword: false,
     })
 
-    const ctx = await buildContext(`Bearer ${token}`)
+    const ctx = await buildContext(
+      mockRequest({ headers: { authorization: `Bearer ${token}` } }),
+    )
     assert.ok(ctx.user)
     assert.equal(ctx.user.role, 'user')
   })
@@ -54,12 +66,16 @@ describe('auth middleware — live DB revalidation', { skip: !env.MONGODB_URI },
       mustChangePassword: false,
     })
 
-    const activeCtx = await buildContext(`Bearer ${token}`)
+    const activeCtx = await buildContext(
+      mockRequest({ headers: { authorization: `Bearer ${token}` } }),
+    )
     assert.ok(activeCtx.user)
 
     await User.findByIdAndUpdate(userId, { isActive: false })
 
-    const deactivatedCtx = await buildContext(`Bearer ${token}`)
+    const deactivatedCtx = await buildContext(
+      mockRequest({ headers: { authorization: `Bearer ${token}` } }),
+    )
     assert.equal(deactivatedCtx.user, null)
 
     assert.throws(
@@ -87,7 +103,9 @@ describe('auth middleware — live DB revalidation', { skip: !env.MONGODB_URI },
 
     await User.findByIdAndUpdate(userId, { deletedAt: new Date() })
 
-    const ctx = await buildContext(`Bearer ${token}`)
+    const ctx = await buildContext(
+      mockRequest({ headers: { authorization: `Bearer ${token}` } }),
+    )
     assert.equal(ctx.user, null)
 
     await User.findByIdAndUpdate(userId, { $unset: { deletedAt: 1 } })

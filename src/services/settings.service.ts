@@ -78,14 +78,13 @@ function mapMeToSettings(user: MeUser): UserSettings {
 }
 
 export const settingsService = {
-  async fetchMe(token: string): Promise<UserSettings> {
-    const data = await graphqlRequest<MeResult>(ME_QUERY, undefined, token)
+  async fetchMe(): Promise<UserSettings> {
+    const data = await graphqlRequest<MeResult>(ME_QUERY)
     if (!data.me) throw new Error('Not authenticated')
     return mapMeToSettings(data.me)
   },
 
   async updateProfile(
-    token: string,
     input: {
       fullName?: string
       phone?: string
@@ -93,11 +92,7 @@ export const settingsService = {
       notificationSettings?: UserSettings['notifications']
     },
   ): Promise<UserSettings> {
-    const data = await graphqlRequest<UpdateProfileResult>(
-      UPDATE_PROFILE_MUTATION,
-      { input },
-      token,
-    )
+    const data = await graphqlRequest<UpdateProfileResult>(UPDATE_PROFILE_MUTATION, { input })
     return mapMeToSettings(data.updateProfile)
   },
 }

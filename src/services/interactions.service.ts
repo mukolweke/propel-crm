@@ -70,20 +70,15 @@ function toApiInput(data: InteractionFormData) {
 }
 
 export const interactionsService = {
-  async fetchInteractions(token: string): Promise<ApiInteraction[]> {
-    const data = await graphqlRequest<{ interactions: ApiInteraction[] }>(
-      INTERACTIONS_QUERY,
-      undefined,
-      token,
-    )
+  async fetchInteractions(): Promise<ApiInteraction[]> {
+    const data = await graphqlRequest<{ interactions: ApiInteraction[] }>(INTERACTIONS_QUERY)
     return data.interactions
   },
 
-  async logInteraction(token: string, form: InteractionFormData): Promise<ApiInteraction> {
+  async logInteraction(form: InteractionFormData): Promise<ApiInteraction> {
     const data = await graphqlRequest<{ logInteraction: ApiInteraction }>(
       LOG_INTERACTION_MUTATION,
       { input: toApiInput(form) },
-      token,
     )
     return data.logInteraction
   },

@@ -1,30 +1,21 @@
 import axios from 'axios'
+import { getCsrfToken } from '@/utils/csrf'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '/api',
   timeout: 15000,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('propel_auth_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+  const csrf = getCsrfToken()
+  if (csrf) {
+    config.headers['X-CSRF-Token'] = csrf
   }
   return config
 })
-
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('propel_auth_token')
-      localStorage.removeItem('propel_auth_user')
-    }
-    return Promise.reject(error)
-  },
-)
 
 export default api

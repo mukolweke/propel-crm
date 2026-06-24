@@ -54,19 +54,27 @@ src/
 ```graphql
 mutation Login {
   login(input: { email: "your-email@example.com", password: "your-password" }) {
-    accessToken
-    refreshToken
     mustChangePassword
     user { id fullName email role }
   }
 }
 ```
 
-Send authenticated requests with header:
+## Cookie-based authentication
 
+The API stores JWTs in **httpOnly, Secure, SameSite=Strict** cookies — not in `localStorage`. The Vue app must call GraphQL with `credentials: 'include'`.
+
+**Local development:** use the Vite proxy so browser requests are same-origin:
+
+```env
+# .env (frontend root)
+VITE_GRAPHQL_URL=/graphql
+VITE_API_PROXY_TARGET=http://localhost:4000
 ```
-Authorization: Bearer <accessToken>
-```
+
+State-changing requests (mutations) also send a double-submit `X-CSRF-Token` header matching the `propel_csrf` cookie set at login.
+
+Login, refresh, and logout set/clear cookies server-side. GraphQL responses no longer include bearer tokens in the JSON body.
 
 ## Privacy & authorization
 

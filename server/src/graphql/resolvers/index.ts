@@ -13,6 +13,9 @@ import { sharingService } from '../../modules/sharing/sharing.service.js'
 import { userService } from '../../modules/users/user.service.js'
 import { auditAdminService } from '../../modules/audit/audit.admin.service.js'
 import { User } from '../../models/index.js'
+import { setAuthCookies, clearAuthCookies, getRefreshTokenFromCookies } from '../../utils/auth-cookies.js'
+import { AppError } from '../../utils/errors.js'
+import { parseInput, loginSchema } from '../../validators/index.js'
 import { dateTimeScalar, jsonScalar } from '../types/scalars.js'
 import {
   mapUser,
@@ -160,33 +163,49 @@ export const resolvers = {
 
   Mutation: {
     login: async (_: unknown, { input }: { input: unknown }, ctx: GraphQLContext) => {
-      const result = await authService.login(input, meta(ctx))
+      const loginInput = parseInput(loginSchema, input)
+      const result = await authService.login(loginInput, meta(ctx))
       const user = await authService.getMe(result.user.id)
+      if (ctx.res) {
+        setAuthCookies(ctx.res, result.tokens, loginInput.remember)
+      }
       return {
         user: mapUser(user),
-        accessToken: result.tokens.accessToken,
-        refreshToken: result.tokens.refreshToken,
         mustChangePassword: result.mustChangePassword,
       }
     },
 
-    logout: async (_: unknown, { refreshToken }: { refreshToken?: string }, ctx: GraphQLContext) => {
+    logout: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
       const user = requireUser(ctx)
-      return authService.logout(user, refreshToken, meta(ctx))
+      const refreshToken = ctx.req
+        ? getRefreshTokenFromCookies(ctx.req.cookies ?? {}) ?? undefined
+        : undefined
+      await authService.logout(user, refreshToken, meta(ctx))
+      if (ctx.res) clearAuthCookies(ctx.res)
+      return true
     },
 
-    refreshToken: async (_: unknown, { refreshToken }: { refreshToken: string }) => {
-      return authService.refreshToken(refreshToken)
+    refreshSession: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
+      const refreshToken = ctx.req ? getRefreshTokenFromCookies(ctx.req.cookies ?? {}) : null
+      if (!refreshToken) {
+        throw new AppError('Invalid refresh token', 'INVALID_TOKEN', 401)
+      }
+      const tokens = await authService.refreshToken(refreshToken)
+      if (ctx.res) {
+        setAuthCookies(ctx.res, tokens, false)
+      }
+      return { success: true }
     },
 
     changePassword: async (_: unknown, { input }: { input: unknown }, ctx: GraphQLContext) => {
       const user = requireUser(ctx)
       const result = await authService.changePassword(user, input, meta(ctx))
       const dbUser = await authService.getMe(result.user.id)
+      if (ctx.res) {
+        setAuthCookies(ctx.res, result.tokens, false)
+      }
       return {
         user: mapUser(dbUser),
-        accessToken: result.tokens.accessToken,
-        refreshToken: result.tokens.refreshToken,
         mustChangePassword: false,
       }
     },

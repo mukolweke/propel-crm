@@ -61,14 +61,11 @@ type User {
 
 type AuthPayload {
   user: User!
-  accessToken: String!
-  refreshToken: String!
   mustChangePassword: Boolean!
 }
 
-type TokenPayload {
-  accessToken: String!
-  refreshToken: String!
+type SessionPayload {
+  success: Boolean!
 }
 
 type MessagePayload {
@@ -226,6 +223,7 @@ scalar JSON
 input LoginInput {
   email: String!
   password: String!
+  remember: Boolean
 }
 
 input ChangePasswordInput {
@@ -348,8 +346,8 @@ type Query {
 
 type Mutation {
   login(input: LoginInput!): AuthPayload!
-  logout(refreshToken: String): Boolean!
-  refreshToken(refreshToken: String!): TokenPayload!
+  logout: Boolean!
+  refreshSession: SessionPayload!
   changePassword(input: ChangePasswordInput!): AuthPayload!
   requestPasswordReset(input: RequestPasswordResetInput!): MessagePayload!
   resetPassword(input: ResetPasswordInput!): MessagePayload!

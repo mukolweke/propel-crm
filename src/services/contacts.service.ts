@@ -123,38 +123,31 @@ function toApiInput(data: ContactFormData) {
 }
 
 export const contactsService = {
-  async fetchContacts(token: string, search?: string): Promise<Contact[]> {
+  async fetchContacts(search?: string): Promise<Contact[]> {
     const data = await graphqlRequest<{ myContacts: ApiContact[] }>(
       MY_CONTACTS_QUERY,
       { search: search?.trim() || undefined },
-      token,
     )
     return data.myContacts.map(mapApiContact)
   },
 
-  async createContact(token: string, form: ContactFormData): Promise<Contact> {
+  async createContact(form: ContactFormData): Promise<Contact> {
     const data = await graphqlRequest<{ createContact: ApiContact }>(
       CREATE_CONTACT_MUTATION,
       { input: toApiInput(form) },
-      token,
     )
     return mapApiContact(data.createContact)
   },
 
-  async updateContact(token: string, id: string, form: ContactFormData): Promise<Contact> {
+  async updateContact(id: string, form: ContactFormData): Promise<Contact> {
     const data = await graphqlRequest<{ updateContact: ApiContact }>(
       UPDATE_CONTACT_MUTATION,
       { id, input: toApiInput(form) },
-      token,
     )
     return mapApiContact(data.updateContact)
   },
 
-  async deleteContact(token: string, id: string): Promise<void> {
-    await graphqlRequest<{ deleteContact: boolean }>(
-      DELETE_CONTACT_MUTATION,
-      { id },
-      token,
-    )
+  async deleteContact(id: string): Promise<void> {
+    await graphqlRequest<{ deleteContact: boolean }>(DELETE_CONTACT_MUTATION, { id })
   },
 }

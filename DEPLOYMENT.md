@@ -90,6 +90,17 @@ Both require `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` to be set.
 - [ ] Remove `SEED_ADMIN_PASSWORD` from long-lived production env after bootstrap
 - [ ] Do not document real passwords in README, tickets, or chat
 
+### Frontend environment
+
+Cookie auth requires same-origin GraphQL requests in development. Configure the Vite proxy:
+
+```env
+VITE_GRAPHQL_URL=/graphql
+VITE_API_PROXY_TARGET=http://localhost:4000
+```
+
+The API sets `httpOnly` JWT cookies at login. Mutations include an `X-CSRF-Token` header (double-submit cookie pattern).
+
 ## Related docs
 
 - API setup: [server/README.md](server/README.md)

@@ -85,12 +85,11 @@ export const useContactsStore = defineStore('contacts', () => {
 
   async function fetchContacts() {
     const authStore = useAuthStore()
-    if (!authStore.token) return
+    if (!authStore.isAuthenticated) return
 
     loading.value = true
     try {
       contacts.value = await contactsService.fetchContacts(
-        authStore.token,
         filters.value.search || undefined,
       )
     } catch (err) {
@@ -120,9 +119,9 @@ export const useContactsStore = defineStore('contacts', () => {
 
   async function addContact(data: ContactFormData) {
     const authStore = useAuthStore()
-    if (!authStore.token) throw new Error('Not authenticated')
+    if (!authStore.isAuthenticated) throw new Error('Not authenticated')
 
-    const contact = await contactsService.createContact(authStore.token, data)
+    const contact = await contactsService.createContact(data)
     contacts.value.unshift(contact)
     return contact
   }
@@ -132,7 +131,7 @@ export const useContactsStore = defineStore('contacts', () => {
     data: Partial<ContactFormData> & Partial<Pick<Contact, 'lastInteraction' | 'followUpDate' | 'converted'>>,
   ) {
     const authStore = useAuthStore()
-    if (!authStore.token) throw new Error('Not authenticated')
+    if (!authStore.isAuthenticated) throw new Error('Not authenticated')
 
     const existing = getContactById(id)
     if (!existing) throw new Error('Contact not found')
@@ -149,7 +148,7 @@ export const useContactsStore = defineStore('contacts', () => {
       status: data.status ?? existing.status,
     }
 
-    const contact = await contactsService.updateContact(authStore.token, id, formData)
+    const contact = await contactsService.updateContact(id, formData)
     const index = contacts.value.findIndex((c) => c.id === id)
     if (index !== -1) contacts.value[index] = contact
     return contact
@@ -157,9 +156,9 @@ export const useContactsStore = defineStore('contacts', () => {
 
   async function deleteContact(id: string) {
     const authStore = useAuthStore()
-    if (!authStore.token) throw new Error('Not authenticated')
+    if (!authStore.isAuthenticated) throw new Error('Not authenticated')
 
-    await contactsService.deleteContact(authStore.token, id)
+    await contactsService.deleteContact(id)
     contacts.value = contacts.value.filter((c) => c.id !== id)
   }
 

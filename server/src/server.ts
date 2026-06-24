@@ -1,20 +1,21 @@
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
+import cookieParser from 'cookie-parser'
 import rateLimit from 'express-rate-limit'
 import depthLimit from 'graphql-depth-limit'
+import { fileURLToPath } from 'node:url'
 import { ApolloServer } from '@apollo/server'
 import { expressMiddleware } from '@apollo/server/express4'
 import { connectDatabase } from './config/database.js'
 import { env, corsOrigins, isProduction } from './config/env.js'
 import { typeDefs, resolvers } from './graphql/resolvers/index.js'
 import { buildContext } from './middleware/auth.js'
+import { assertValidCsrf } from './middleware/csrf.js'
 import { logger } from './utils/logger.js'
 import { AppError } from './utils/errors.js'
 
-async function bootstrap() {
-  await connectDatabase()
-
+export async function createApp() {
   const app = express()
   app.set('trust proxy', 1)
 
@@ -24,6 +25,8 @@ async function bootstrap() {
       crossOriginEmbedderPolicy: false,
     }),
   )
+
+  app.use(cookieParser())
 
   const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -80,9 +83,27 @@ async function bootstrap() {
     '/graphql',
     cors<cors.CorsRequest>({ origin: corsOrigins, credentials: true }),
     express.json({ limit: '512kb' }),
+    (req, res, next) => {
+      try {
+        assertValidCsrf(req)
+        next()
+      } catch (error) {
+        if (error instanceof AppError) {
+          res.status(error.statusCode).json({
+            errors: [
+              {
+                message: error.message,
+                extensions: { code: error.code, statusCode: error.statusCode },
+              },
+            ],
+          })
+          return
+        }
+        next(error)
+      }
+    },
     expressMiddleware(server, {
-      context: async ({ req }) =>
-        buildContext(req.headers.authorization, req.ip, req.headers['user-agent']),
+      context: async ({ req }) => buildContext(req),
     }),
   )
 
@@ -91,12 +112,22 @@ async function bootstrap() {
     res.status(500).json({ error: 'Internal server error' })
   })
 
+  return app
+}
+
+async function bootstrap() {
+  await connectDatabase()
+  const app = await createApp()
+
   app.listen(env.PORT, '0.0.0.0', () => {
     logger.info(`Propel CRM API ready at http://localhost:${env.PORT}/graphql`)
   })
 }
 
-bootstrap().catch((err) => {
-  logger.error('Failed to start server', err)
-  process.exit(1)
-})
+const isMainModule = process.argv[1] === fileURLToPath(import.meta.url)
+if (isMainModule) {
+  bootstrap().catch((err) => {
+    logger.error('Failed to start server', err)
+    process.exit(1)
+  })
+}

@@ -45,12 +45,12 @@ export const useReportsStore = defineStore('reports', () => {
 
   async function fetchReports(p: ReportPeriod = period.value) {
     const authStore = useAuthStore()
-    if (!authStore.token) return
+    if (!authStore.isAuthenticated) return
 
     loading.value = true
     period.value = p
     try {
-      const data = await reportsService.fetchReports(authStore.token, {
+      const data = await reportsService.fetchReports({
         from: dateFrom.value,
         to: dateTo.value,
         period: p,

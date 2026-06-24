@@ -49,6 +49,7 @@ const requiredDateTimeInputSchema = z
 export const loginSchema = z.object({
   email: emailSchema,
   password: z.string().min(1).max(128),
+  remember: z.boolean().optional().default(false),
 })
 
 export const changePasswordSchema = z.object({

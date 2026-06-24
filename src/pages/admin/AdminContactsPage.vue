@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useAuthStore } from '@/stores/authStore'
 import { graphqlRequest } from '@/services/graphql'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
 
-const authStore = useAuthStore()
 const loading = ref(true)
 const contacts = ref<Array<Record<string, unknown>>>([])
 
@@ -22,7 +20,7 @@ onMounted(async () => {
   try {
     const data = await graphqlRequest<{
       adminContacts: { items: Array<Record<string, unknown>> }
-    }>(QUERY, { page: 1, pageSize: 50 }, authStore.token)
+    }>(QUERY, { page: 1, pageSize: 50 })
     contacts.value = data.adminContacts.items
   } finally {
     loading.value = false

@@ -15,8 +15,7 @@ app.use(router)
 configureGraphQLSession({
   async refresh() {
     const authStore = useAuthStore()
-    const ok = await authStore.refreshSession()
-    return ok ? authStore.token : null
+    return authStore.refreshSession()
   },
   async onExpired() {
     const authStore = useAuthStore()

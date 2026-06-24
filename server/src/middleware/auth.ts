@@ -2,6 +2,7 @@ import type { Request } from 'express'
 import type { AuthUser, GraphQLContext } from '../types/index.js'
 import { User } from '../models/index.js'
 import { verifyAccessToken, extractBearerToken } from '../utils/jwt.js'
+import { getAccessTokenFromCookies } from '../utils/auth-cookies.js'
 
 export function mapDbUserToAuthUser(user: {
   _id: { toString(): string }
@@ -35,14 +36,22 @@ async function resolveAuthUserFromAccessToken(token: string): Promise<AuthUser |
   return loadAuthUserFromId(payload.id)
 }
 
-export async function buildContext(
-  authHeader?: string,
-  ip?: string,
-  userAgent?: string,
-): Promise<GraphQLContext> {
-  const token = extractBearerToken(authHeader)
+function resolveAccessToken(req: Request): string | null {
+  const cookieToken = getAccessTokenFromCookies(req.cookies ?? {})
+  if (cookieToken) return cookieToken
+  return extractBearerToken(req.headers.authorization)
+}
+
+export async function buildContext(req: Request): Promise<GraphQLContext> {
+  const token = resolveAccessToken(req)
   const user = token ? await resolveAuthUserFromAccessToken(token) : null
-  return { user, ip, userAgent }
+  return {
+    user,
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+    req,
+    res: req.res,
+  }
 }
 
 export function requireAuth(context: GraphQLContext) {

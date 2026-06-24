@@ -250,7 +250,6 @@ export interface ReportsPayload {
 
 export const reportsService = {
   async fetchReports(
-    token: string,
     options: {
       from: string
       to: string
@@ -277,7 +276,6 @@ export const reportsService = {
         month: fromDate.getMonth() + 1,
         date: today.toISOString(),
       },
-      token,
     )
 
     const contacts = data.myContacts.map(mapApiContact)

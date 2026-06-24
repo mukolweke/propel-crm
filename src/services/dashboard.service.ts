@@ -119,13 +119,13 @@ export function buildRecentActivity(
 }
 
 export const dashboardService = {
-  async fetchDashboard(token: string): Promise<DashboardData> {
+  async fetchDashboard(): Promise<DashboardData> {
     const data = await graphqlRequest<{
       dailyReport: DailyReport
       monthlyReport: MonthlyReport
       conversionRate: ConversionRateReport
       interactions: ApiInteraction[]
-    }>(DASHBOARD_QUERY, undefined, token)
+    }>(DASHBOARD_QUERY)
 
     return data
   },

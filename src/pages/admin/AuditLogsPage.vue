@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { useAuthStore } from '@/stores/authStore'
 import { graphqlRequest } from '@/services/graphql'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import SkeletonLoader from '@/components/ui/SkeletonLoader.vue'
 
-const authStore = useAuthStore()
 const loading = ref(true)
 const logs = ref<Array<Record<string, unknown>>>([])
 
@@ -43,7 +41,6 @@ async function fetchLogs() {
           pageSize: 50,
         },
       },
-      authStore.token,
     )
     logs.value = data.auditLogs.items
   } finally {

@@ -51,7 +51,7 @@ export const useFollowUpsStore = defineStore('followUps', () => {
 
   async function fetchFollowUps() {
     const authStore = useAuthStore()
-    if (!authStore.token) return
+    if (!authStore.isAuthenticated) return
 
     const contactsStore = useContactsStore()
     loading.value = true
@@ -60,7 +60,7 @@ export const useFollowUpsStore = defineStore('followUps', () => {
         await contactsStore.fetchContacts()
       }
 
-      const items = await followUpsService.fetchFollowUps(authStore.token)
+      const items = await followUpsService.fetchFollowUps()
       const names = contactNameMap()
       followUps.value = items.map((item) =>
         mapApiFollowUp(item, names.get(item.contactId) ?? 'Unknown'),
@@ -79,9 +79,9 @@ export const useFollowUpsStore = defineStore('followUps', () => {
 
   async function completeFollowUp(id: string, notes?: string) {
     const authStore = useAuthStore()
-    if (!authStore.token) throw new Error('Not authenticated')
+    if (!authStore.isAuthenticated) throw new Error('Not authenticated')
 
-    await followUpsService.completeFollowUp(authStore.token, id)
+    await followUpsService.completeFollowUp(id)
     const item = followUps.value.find((f) => f.id === id)
     if (item) {
       item.completed = true
@@ -92,9 +92,9 @@ export const useFollowUpsStore = defineStore('followUps', () => {
 
   async function rescheduleFollowUp(id: string, newDate: string) {
     const authStore = useAuthStore()
-    if (!authStore.token) throw new Error('Not authenticated')
+    if (!authStore.isAuthenticated) throw new Error('Not authenticated')
 
-    const updated = await followUpsService.rescheduleFollowUp(authStore.token, id, newDate)
+    const updated = await followUpsService.rescheduleFollowUp(id, newDate)
     const item = followUps.value.find((f) => f.id === id)
     if (item) {
       item.dueDate = updated.scheduledDate

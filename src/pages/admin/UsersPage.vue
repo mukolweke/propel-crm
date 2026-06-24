@@ -70,7 +70,7 @@ async function fetchUsers() {
   try {
     const data = await graphqlRequest<{
       adminUsers: { items: AdminUser[]; total: number }
-    }>(USERS_QUERY, { page: 1, pageSize: 100 }, authStore.token)
+    }>(USERS_QUERY, { page: 1, pageSize: 100 })
     users.value = data.adminUsers.items
     total.value = data.adminUsers.total
   } finally {
@@ -120,7 +120,6 @@ async function handleCreate() {
           password: form.password,
         },
       },
-      authStore.token,
     )
     toast.success('User created', `${form.fullName} can sign in and must change their password on first login.`)
     closeModal()
@@ -142,7 +141,6 @@ async function toggleActive(user: AdminUser) {
     await graphqlRequest(
       SET_USER_ACTIVE_MUTATION,
       { userId: user.id, isActive: !user.isActive },
-      authStore.token,
     )
     toast.success(user.isActive ? 'User deactivated' : 'User activated')
     await fetchUsers()
