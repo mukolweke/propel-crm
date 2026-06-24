@@ -1,7 +1,7 @@
-import { SharedAccess, Contact } from '../../models/index.js'
-import { notDeletedFilter } from '../../models/Contact.js'
+import { SharedAccess } from '../../models/index.js'
 import { AppError } from '../../utils/errors.js'
 import { assertIsOwner } from '../../middleware/authorization.js'
+import { findContactForUser } from '../../middleware/query-scope.js'
 import { parseInput, shareInputSchema } from '../../validators/index.js'
 import { contactService } from '../contacts/contact.service.js'
 import type { AuthUser } from '../../types/index.js'
@@ -21,7 +21,7 @@ export const sharingService = {
   },
 
   async revokeAccess(user: AuthUser, contactId: string, sharedUserId: string) {
-    const contact = await Contact.findOne({ _id: contactId, ...notDeletedFilter })
+    const contact = await findContactForUser(user, contactId, 'owner')
     if (!contact) throw new AppError('Contact not found', 'NOT_FOUND', 404)
     assertIsOwner(user.id, contact.ownerId)
 

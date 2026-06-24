@@ -6,9 +6,12 @@ import {
   assertCanView,
   assertIsOwner,
 } from '../../middleware/authorization.js'
+import {
+  findContactForUser,
+  type ContactAccessMode,
+} from '../../middleware/query-scope.js'
 import { isSuperAdmin } from '../../middleware/rbac.js'
 import { parseInput, contactInputSchema, contactUpdateSchema } from '../../validators/index.js'
-import { parseObjectId } from '../../utils/objectId.js'
 import { maskPhone, sanitizeMetadata } from '../../utils/sanitize.js'
 import { auditService } from '../audit/audit.service.js'
 import { assertNoDuplicateContact, checkContactDuplicate } from './contact-duplicate.service.js'
@@ -19,9 +22,8 @@ async function getSharesForContact(contactId: string) {
   return SharedAccess.find({ contactId })
 }
 
-async function getContactOrThrow(contactId: string) {
-  parseObjectId(contactId, 'contact ID')
-  const contact = await Contact.findOne({ _id: contactId, ...notDeletedFilter })
+async function getContactForUser(user: AuthUser, contactId: string, mode: ContactAccessMode) {
+  const contact = await findContactForUser(user, contactId, mode)
   if (!contact) throw new AppError('Contact not found', 'NOT_FOUND', 404)
   return contact
 }
@@ -39,7 +41,7 @@ export const contactService = {
   },
 
   async getContact(user: AuthUser, contactId: string) {
-    const contact = await getContactOrThrow(contactId)
+    const contact = await getContactForUser(user, contactId, 'view')
     if (isSuperAdmin(user)) return contact
     const shares = await getSharesForContact(contactId)
     assertCanView(user.id, contact, shares)
@@ -77,7 +79,7 @@ export const contactService = {
     input: unknown,
     meta: { ip?: string; userAgent?: string },
   ) {
-    const contact = await getContactOrThrow(contactId)
+    const contact = await getContactForUser(user, contactId, 'edit')
     const shares = await getSharesForContact(contactId)
     if (!isSuperAdmin(user)) assertCanEdit(user.id, contact, shares)
 
@@ -128,7 +130,7 @@ export const contactService = {
     contactId: string,
     meta: { ip?: string; userAgent?: string },
   ) {
-    const contact = await getContactOrThrow(contactId)
+    const contact = await getContactForUser(user, contactId, 'owner')
     if (!isSuperAdmin(user)) assertIsOwner(user.id, contact.ownerId)
 
     contact.deletedAt = new Date()
@@ -155,7 +157,7 @@ export const contactService = {
     permission: 'view' | 'report' | 'edit',
     meta: { ip?: string; userAgent?: string },
   ) {
-    const contact = await getContactOrThrow(contactId)
+    const contact = await getContactForUser(user, contactId, 'owner')
     assertIsOwner(user.id, contact.ownerId)
 
     if (sharedUserId === user.id) {
@@ -188,7 +190,8 @@ export const contactService = {
   },
 
   async assertContactAccess(user: AuthUser, contactId: string, requireEdit = false) {
-    const contact = await getContactOrThrow(contactId)
+    const mode: ContactAccessMode = requireEdit ? 'edit' : 'view'
+    const contact = await getContactForUser(user, contactId, mode)
     if (isSuperAdmin(user)) return { contact, shares: [] as Awaited<ReturnType<typeof getSharesForContact>> }
     const shares = await getSharesForContact(contactId)
     if (requireEdit) assertCanEdit(user.id, contact, shares)

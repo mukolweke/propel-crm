@@ -2,6 +2,7 @@ import { Types } from 'mongoose'
 import { Interaction, FollowUp } from '../../models/index.js'
 import { AppError } from '../../utils/errors.js'
 import { contactService } from '../contacts/contact.service.js'
+import { findInteractionForUser } from '../../middleware/query-scope.js'
 import { isSuperAdmin } from '../../middleware/rbac.js'
 import { parseInput, interactionInputSchema, interactionUpdateSchema } from '../../validators/index.js'
 import { parseObjectId } from '../../utils/objectId.js'
@@ -76,8 +77,7 @@ export const interactionService = {
   },
 
   async updateInteraction(user: AuthUser, interactionId: string, input: unknown) {
-    parseObjectId(interactionId, 'interaction ID')
-    const interaction = await Interaction.findById(interactionId)
+    const interaction = await findInteractionForUser(user, interactionId)
     if (!interaction) throw new AppError('Interaction not found', 'NOT_FOUND', 404)
     if (!isSuperAdmin(user) && interaction.ownerId.toString() !== user.id) {
       throw new AppError('Not authorized', 'FORBIDDEN', 403)

@@ -2,9 +2,9 @@ import { Types } from 'mongoose'
 import { FollowUp } from '../../models/index.js'
 import { AppError } from '../../utils/errors.js'
 import { contactService } from '../contacts/contact.service.js'
+import { findFollowUpForUser } from '../../middleware/query-scope.js'
 import { isSuperAdmin } from '../../middleware/rbac.js'
 import { parseInput, followUpInputSchema } from '../../validators/index.js'
-import { parseObjectId } from '../../utils/objectId.js'
 import { startOfDay, endOfDay } from '../../utils/helpers.js'
 import { auditService } from '../audit/audit.service.js'
 import type { AuthUser } from '../../types/index.js'
@@ -81,8 +81,7 @@ export const followUpService = {
     followUpId: string,
     meta: { ip?: string; userAgent?: string },
   ) {
-    parseObjectId(followUpId, 'follow-up ID')
-    const followUp = await FollowUp.findById(followUpId)
+    const followUp = await findFollowUpForUser(user, followUpId)
     if (!followUp) throw new AppError('Follow-up not found', 'NOT_FOUND', 404)
     if (!isSuperAdmin(user) && followUp.ownerId.toString() !== user.id) {
       throw new AppError('Not authorized', 'FORBIDDEN', 403)
@@ -106,8 +105,7 @@ export const followUpService = {
   },
 
   async rescheduleFollowUp(user: AuthUser, followUpId: string, scheduledDate: string) {
-    parseObjectId(followUpId, 'follow-up ID')
-    const followUp = await FollowUp.findById(followUpId)
+    const followUp = await findFollowUpForUser(user, followUpId)
     if (!followUp) throw new AppError('Follow-up not found', 'NOT_FOUND', 404)
     if (!isSuperAdmin(user) && followUp.ownerId.toString() !== user.id) {
       throw new AppError('Not authorized', 'FORBIDDEN', 403)
