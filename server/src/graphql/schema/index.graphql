@@ -354,6 +354,7 @@ input AuditLogFilterInput {
 type Query {
   me: User
   myContacts(search: String): [Contact!]!
+  reportableContacts: [Contact!]!
   checkContactDuplicate(phone: String, email: String, excludeContactId: ID): ContactDuplicateInfo!
   contact(id: ID!): Contact
   sharedContacts: [Contact!]!

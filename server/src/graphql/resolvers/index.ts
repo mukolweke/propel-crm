@@ -73,6 +73,12 @@ export const resolvers = {
       return contacts.map(mapContact)
     },
 
+    reportableContacts: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
+      const user = requireAppAccess(ctx)
+      const contacts = await contactService.reportableContacts(user)
+      return contacts.map(mapContact)
+    },
+
     checkContactDuplicate: async (
       _: unknown,
       {

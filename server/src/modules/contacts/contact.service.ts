@@ -16,6 +16,7 @@ import { maskPhone, sanitizeMetadata } from '../../utils/sanitize.js'
 import { auditService } from '../audit/audit.service.js'
 import { assertNoDuplicateContact, checkContactDuplicate } from './contact-duplicate.service.js'
 import { searchContacts } from './contact-search.js'
+import { findReportableContacts } from '../reports/report-access.js'
 import type { AuthUser, PaginatedResult } from '../../types/index.js'
 
 async function getSharesForContact(contactId: string) {
@@ -31,6 +32,10 @@ async function getContactForUser(user: AuthUser, contactId: string, mode: Contac
 export const contactService = {
   async myContacts(user: AuthUser, search?: string) {
     return searchContacts(user, search)
+  },
+
+  async reportableContacts(user: AuthUser) {
+    return findReportableContacts(user)
   },
 
   async sharedContacts(userId: string) {

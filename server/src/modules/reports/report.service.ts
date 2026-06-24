@@ -1,9 +1,9 @@
 import { Types } from 'mongoose'
 import { Contact, Interaction, FollowUp } from '../../models/index.js'
-import { notDeletedFilter } from '../../models/Contact.js'
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from '../../utils/helpers.js'
 import { isSuperAdmin } from '../../middleware/rbac.js'
 import { auditService } from '../audit/audit.service.js'
+import { buildReportableContactFilter } from './report-access.js'
 import type { AuthUser, ConversionRateReport, DailyReport, MonthlyReport } from '../../types/index.js'
 
 function scopedOwnerId(user: AuthUser): Types.ObjectId | null {
@@ -17,14 +17,14 @@ export const reportService = {
     const end = endOfDay(date)
     const ownerId = scopedOwnerId(user)
     const ownerFilter = ownerId ? { ownerId } : {}
+    const reportableContactFilter = await buildReportableContactFilter(user)
 
     const [contactsAdded, interactionsCompleted, convertedClients, followUpsCompleted] =
       await Promise.all([
-        Contact.countDocuments({ ...ownerFilter, ...notDeletedFilter, createdAt: { $gte: start, $lte: end } }),
+        Contact.countDocuments({ ...reportableContactFilter, createdAt: { $gte: start, $lte: end } }),
         Interaction.countDocuments({ ...ownerFilter, createdAt: { $gte: start, $lte: end } }),
         Contact.countDocuments({
-          ...ownerFilter,
-          ...notDeletedFilter,
+          ...reportableContactFilter,
           isConverted: true,
           updatedAt: { $gte: start, $lte: end },
         }),
@@ -56,11 +56,12 @@ export const reportService = {
     const start = startOfMonth(ref)
     const end = endOfMonth(ref)
     const ownerFilter = scopedOwnerId(user) ? { ownerId: scopedOwnerId(user) } : {}
+    const reportableContactFilter = await buildReportableContactFilter(user)
 
     const [totalContacts, totalInteractions, converted, activeFollowUps] = await Promise.all([
-      Contact.countDocuments({ ...ownerFilter, ...notDeletedFilter, createdAt: { $lte: end } }),
+      Contact.countDocuments({ ...reportableContactFilter, createdAt: { $lte: end } }),
       Interaction.countDocuments({ ...ownerFilter, createdAt: { $gte: start, $lte: end } }),
-      Contact.countDocuments({ ...ownerFilter, ...notDeletedFilter, isConverted: true, updatedAt: { $gte: start, $lte: end } }),
+      Contact.countDocuments({ ...reportableContactFilter, isConverted: true, updatedAt: { $gte: start, $lte: end } }),
       FollowUp.countDocuments({ ...ownerFilter, status: { $in: ['pending', 'overdue'] }, scheduledDate: { $lte: end } }),
     ])
 
@@ -89,13 +90,12 @@ export const reportService = {
   async conversionRate(user: AuthUser, from?: string, to?: string): Promise<ConversionRateReport> {
     const periodEnd = to ? new Date(to) : new Date()
     const periodStart = from ? new Date(from) : startOfMonth(periodEnd)
-    const ownerFilter = scopedOwnerId(user) ? { ownerId: scopedOwnerId(user) } : {}
+    const reportableContactFilter = await buildReportableContactFilter(user)
 
     const [total, converted] = await Promise.all([
-      Contact.countDocuments({ ...ownerFilter, ...notDeletedFilter, createdAt: { $gte: periodStart, $lte: periodEnd } }),
+      Contact.countDocuments({ ...reportableContactFilter, createdAt: { $gte: periodStart, $lte: periodEnd } }),
       Contact.countDocuments({
-        ...ownerFilter,
-        ...notDeletedFilter,
+        ...reportableContactFilter,
         isConverted: true,
         updatedAt: { $gte: periodStart, $lte: periodEnd },
       }),

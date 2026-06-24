@@ -1,12 +1,16 @@
 import { Types } from 'mongoose'
 import { Contact, FollowUp, Interaction } from '../../models/index.js'
-import { notDeletedFilter } from '../../models/Contact.js'
 import { buildContactSearchFilter } from '../contacts/contact-search.js'
 import { auditService } from '../audit/audit.service.js'
 import { isSuperAdmin } from '../../middleware/rbac.js'
 import { rowsToCsv } from '../../utils/csv-escape.js'
 import { endOfDay, startOfDay } from '../../utils/helpers.js'
 import { parseInput, exportContactsSchema, exportReportSchema } from '../../validators/index.js'
+import {
+  buildReportableContactFilter,
+  filterContactsForReport,
+  getSharesByContactId,
+} from '../reports/report-access.js'
 import type { AuthUser } from '../../types/index.js'
 import type { IContact } from '../../models/Contact.js'
 
@@ -168,11 +172,12 @@ async function gatherReportExportData(
   dateTo: string,
 ): Promise<ReportExportBundle> {
   const owner = ownerFilter(user)
+  const reportableContactFilter = await buildReportableContactFilter(user)
   const fromDate = startOfDay(new Date(dateFrom))
   const toDate = endOfDay(new Date(dateTo))
 
-  const [contacts, interactions, dailyFollowUpsCompleted, activeFollowUps] = await Promise.all([
-    Contact.find({ ...owner, ...notDeletedFilter }).sort({ updatedAt: -1 }).lean(),
+  const [rawContacts, interactions, dailyFollowUpsCompleted, activeFollowUps] = await Promise.all([
+    Contact.find(reportableContactFilter).sort({ updatedAt: -1 }).lean(),
     Interaction.find({ ...owner, createdAt: { $gte: fromDate, $lte: toDate } }).lean(),
     FollowUp.countDocuments({
       ...owner,
@@ -184,6 +189,9 @@ async function gatherReportExportData(
       status: { $in: ['pending', 'overdue'] },
     }),
   ])
+
+  const sharesByContactId = await getSharesByContactId(rawContacts.map((c) => c._id))
+  const contacts = filterContactsForReport(user, rawContacts, sharesByContactId)
 
   const contactsInRange = contacts.filter((c) => isInDateRange(c.createdAt.toISOString(), dateFrom, dateTo))
   const exportContacts = contactsInRange.length ? contactsInRange : contacts

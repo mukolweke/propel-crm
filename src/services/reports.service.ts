@@ -89,6 +89,17 @@ const REPORTS_QUERY = `
       createdAt
       updatedAt
     }
+    reportableContacts {
+      id
+      fullName
+      propertyInterest
+      budgetRange
+      leadSource
+      status
+      isConverted
+      createdAt
+      updatedAt
+    }
   }
 `
 
@@ -267,6 +278,7 @@ export const reportsService = {
       monthlyReport: MonthlyReport
       interactions: { id: string; contactId: string; createdAt: string }[]
       myContacts: Parameters<typeof mapApiContact>[0][]
+      reportableContacts: Parameters<typeof mapApiContact>[0][]
     }>(
       REPORTS_QUERY,
       {
@@ -278,7 +290,7 @@ export const reportsService = {
       },
     )
 
-    const contacts = data.myContacts.map(mapApiContact)
+    const contacts = data.reportableContacts.map(mapApiContact)
     const contactsInRange = contacts.filter((c) => isInDateRange(c.createdAt, options.from, options.to))
     const leadsAddedToday = contacts.filter((c) => isToday(c.createdAt)).length
     const interactionsToday = data.interactions.filter((i) => isToday(i.createdAt)).length
