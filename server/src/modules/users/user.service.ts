@@ -42,10 +42,16 @@ export const userService = {
     meta: { ip?: string; userAgent?: string },
   ) {
     assertSuperAdmin(admin)
-    if (admin.id === userId) throw new AppError('Cannot deactivate yourself', 'BAD_REQUEST', 400)
+    if (admin.id === userId && !isActive) {
+      throw new AppError('Cannot deactivate yourself', 'BAD_REQUEST', 400)
+    }
 
     const user = await User.findById(userId)
     if (!user || user.deletedAt) throw new AppError('User not found', 'NOT_FOUND', 404)
+
+    if (!isActive && user.role === 'super_admin') {
+      throw new AppError('Cannot deactivate a super admin account', 'BAD_REQUEST', 400)
+    }
 
     user.isActive = isActive
     await user.save()
