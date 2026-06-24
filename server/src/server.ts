@@ -12,6 +12,7 @@ import { env, corsOrigins, isProduction } from './config/env.js'
 import { typeDefs, resolvers } from './graphql/resolvers/index.js'
 import { buildContext } from './middleware/auth.js'
 import { assertValidCsrf } from './middleware/csrf.js'
+import { enforceHttps } from './middleware/https.js'
 import { logger } from './utils/logger.js'
 import { AppError } from './utils/errors.js'
 
@@ -19,10 +20,19 @@ export async function createApp() {
   const app = express()
   app.set('trust proxy', 1)
 
+  app.use(enforceHttps)
+
   app.use(
     helmet({
       contentSecurityPolicy: isProduction ? undefined : false,
       crossOriginEmbedderPolicy: false,
+      hsts: isProduction
+        ? {
+            maxAge: 31_536_000,
+            includeSubDomains: true,
+            preload: false,
+          }
+        : false,
     }),
   )
 

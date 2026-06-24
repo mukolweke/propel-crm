@@ -102,14 +102,16 @@ Enforced in service layer + authorization helpers.
 2. **Root directory:** `server`
 3. **Build:** `npm install && npm run build`
 4. **Start:** `npm start`
-5. Set env vars from `.env.example`
+5. Set env vars from `.env.example` (`NODE_ENV=production`, `CORS_ORIGINS=https://…`)
 6. URL: `https://your-app.onrender.com/graphql`
+
+Render terminates TLS at the edge and forwards `X-Forwarded-Proto: https`. The app redirects any plain-HTTP request to HTTPS and sets HSTS in production.
 
 ### Backend — Railway
 
 1. New project → deploy from repo
 2. Set root to `server/`
-3. Add `MONGODB_URI`, JWT secrets, `CORS_ORIGINS`
+3. Add `MONGODB_URI`, JWT secrets, `NODE_ENV=production`, `CORS_ORIGINS=https://…`
 4. Railway auto-detects Node build
 
 ### Frontend — Vercel / Netlify
@@ -119,6 +121,8 @@ Deploy the Vue app separately. Set API URL in frontend env:
 ```
 VITE_GRAPHQL_URL=https://your-api.onrender.com/graphql
 ```
+
+Use `https://` for both the SPA URL and GraphQL endpoint. Auth cookies are `Secure` in production and are not sent over plain HTTP.
 
 ### Docker (optional)
 

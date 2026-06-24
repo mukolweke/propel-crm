@@ -101,6 +101,35 @@ VITE_API_PROXY_TARGET=http://localhost:4000
 
 The API sets `httpOnly` JWT cookies at login. Mutations include an `X-CSRF-Token` header (double-submit cookie pattern).
 
+### HTTPS (production)
+
+The API enforces TLS in production:
+
+- **HTTP → HTTPS:** App middleware returns `301` to `https://{host}{path}` when the request is not secure (uses `trust proxy` + `X-Forwarded-Proto` behind Render/Railway).
+- **HSTS:** `Strict-Transport-Security: max-age=31536000; includeSubDomains` via Helmet when `NODE_ENV=production`.
+- **Cookies:** `propel_access_token`, `propel_refresh_token`, and `propel_csrf` use `Secure` in production — browsers only send them over HTTPS.
+
+**Required production env:**
+
+```env
+NODE_ENV=production
+CORS_ORIGINS=https://your-frontend.vercel.app
+```
+
+`CORS_ORIGINS` must use `https://` URLs; the server refuses to start in production with `http://` origins.
+
+**Manual verification after deploy:**
+
+```bash
+# Should 301 to HTTPS (or connection refused if the host blocks port 80)
+curl -sI http://your-api.onrender.com/health
+
+# Should include HSTS on HTTPS responses
+curl -sI https://your-api.onrender.com/health | grep -i strict-transport-security
+```
+
+Frontend hosts (Vercel/Netlify) terminate TLS at the CDN; ensure `VITE_GRAPHQL_URL` uses `https://`.
+
 ## Related docs
 
 - API setup: [server/README.md](server/README.md)

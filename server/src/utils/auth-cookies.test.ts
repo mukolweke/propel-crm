@@ -29,6 +29,7 @@ describe('auth-cookies', () => {
     assert.ok(access)
     assert.equal(access.options.httpOnly, true)
     assert.equal(access.options.sameSite, 'strict')
+    assert.equal(access.options.secure, false) // NODE_ENV=test; true in production
     assert.equal(access.value, 'access')
 
     assert.ok(refresh)
