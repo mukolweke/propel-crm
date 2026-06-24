@@ -1,8 +1,10 @@
 import { Types } from 'mongoose'
 import { Contact, User, notDeletedFilter, type IContact } from '../../models/index.js'
 import { AppError } from '../../utils/errors.js'
+import { findContactForUser } from '../../middleware/query-scope.js'
 import { isSuperAdmin } from '../../middleware/rbac.js'
 import { normalizeEmail, normalizePhone } from '../../utils/normalize.js'
+import { isValidObjectId } from '../../utils/objectId.js'
 import { maskPhone } from '../../utils/sanitize.js'
 import { auditService } from '../audit/audit.service.js'
 import type { AuthUser } from '../../types/index.js'
@@ -74,6 +76,21 @@ export function buildDuplicateQuery(
   }
 
   return filter
+}
+
+/**
+ * Returns excludeContactId only when the caller may edit that contact.
+ * Foreign or unknown IDs are dropped silently to avoid leaking existence.
+ */
+export async function resolveExcludeContactId(
+  user: AuthUser,
+  excludeContactId?: string,
+): Promise<string | undefined> {
+  if (!excludeContactId?.trim()) return undefined
+  if (!isValidObjectId(excludeContactId)) return undefined
+
+  const contact = await findContactForUser(user, excludeContactId, 'edit')
+  return contact ? excludeContactId : undefined
 }
 
 export async function findDuplicateContact(
@@ -195,7 +212,8 @@ export async function assertNoDuplicateContact(
   excludeContactId: string | undefined,
   meta: AssertDuplicateMeta,
 ): Promise<void> {
-  const result = await findDuplicateContact(phone, email, excludeContactId)
+  const safeExcludeId = await resolveExcludeContactId(user, excludeContactId)
+  const result = await findDuplicateContact(phone, email, safeExcludeId)
   if (!result.isDuplicate || !result.existingContact || !result.matchedField) return
 
   const ownerId = result.existingContact.ownerId.toString()
@@ -218,7 +236,8 @@ export async function checkContactDuplicate(
   email: string,
   excludeContactId?: string,
 ): Promise<ContactDuplicateInfo> {
-  const result = await findDuplicateContact(phone, email, excludeContactId)
+  const safeExcludeId = await resolveExcludeContactId(user, excludeContactId)
+  const result = await findDuplicateContact(phone, email, safeExcludeId)
   if (!result.isDuplicate || !result.existingContact || !result.matchedField) {
     return { isDuplicate: false }
   }
