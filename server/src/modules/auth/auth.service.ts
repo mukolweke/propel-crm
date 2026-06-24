@@ -22,6 +22,9 @@ import { logger } from '../../utils/logger.js'
 const MAX_LOGIN_ATTEMPTS = 5
 const LOCK_DURATION_MS = 15 * 60 * 1000
 
+export const PASSWORD_RESET_REQUEST_MESSAGE =
+  'If an account exists for this email, a 6 digit reset code has been sent.'
+
 function toAuthUser(user: {
   _id: { toString(): string }
   email: string
@@ -250,51 +253,46 @@ export const authService = {
       deletedAt: { $exists: false },
     })
 
-    if (!user) {
-      throw new AppError('No account found with this email address', 'EMAIL_NOT_FOUND', 404)
-    }
-
-    const code = generateResetCode()
-    const expiresAt = new Date(
-      Date.now() + env.PASSWORD_RESET_CODE_TTL_MINUTES * 60 * 1000,
-    )
-
-    await PasswordResetCode.updateMany(
-      { userId: user._id, usedAt: { $exists: false } },
-      { usedAt: new Date() },
-    )
-
-    await PasswordResetCode.create({
-      userId: user._id,
-      codeHash: hashToken(code),
-      expiresAt,
-      attempts: 0,
-    })
-
-    try {
-      await emailService.sendPasswordResetCode(user.email, user.fullName, code)
-    } catch (err) {
-      logger.error('Failed to send password reset email', err)
-      throw new AppError(
-        'Unable to send reset email right now. Please try again later.',
-        'EMAIL_SEND_FAILED',
-        503,
+    if (user) {
+      const code = generateResetCode()
+      const expiresAt = new Date(
+        Date.now() + env.PASSWORD_RESET_CODE_TTL_MINUTES * 60 * 1000,
       )
-    }
 
-    await auditService.log({
-      action: 'PASSWORD_RESET',
-      entityType: 'AUTH',
-      entityId: user._id.toString(),
-      performedBy: toAuthUser(user),
-      ipAddress: meta.ip,
-      userAgent: meta.userAgent,
-      metadata: { stage: 'requested' },
-    })
+      await PasswordResetCode.updateMany(
+        { userId: user._id, usedAt: { $exists: false } },
+        { usedAt: new Date() },
+      )
+
+      await PasswordResetCode.create({
+        userId: user._id,
+        codeHash: hashToken(code),
+        expiresAt,
+        attempts: 0,
+      })
+
+      try {
+        await emailService.sendPasswordResetCode(user.email, user.fullName, code)
+      } catch (err) {
+        logger.error('Failed to send password reset email', err)
+      }
+
+      await auditService.log({
+        action: 'PASSWORD_RESET',
+        entityType: 'AUTH',
+        entityId: user._id.toString(),
+        performedBy: toAuthUser(user),
+        ipAddress: meta.ip,
+        userAgent: meta.userAgent,
+        metadata: { stage: 'requested' },
+      })
+    } else {
+      hashToken(generateResetCode())
+    }
 
     return {
       success: true,
-      message: 'A 6-digit reset code has been sent to your email.',
+      message: PASSWORD_RESET_REQUEST_MESSAGE,
     }
   },
 
