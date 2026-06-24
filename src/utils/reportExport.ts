@@ -202,3 +202,31 @@ export function exportReport(format: 'csv' | 'excel' | 'pdf', data: ReportExport
   else if (format === 'excel') exportReportExcel(data)
   else exportReportPdf(data)
 }
+
+export function downloadExportPayload(payload: {
+  filename: string
+  mimeType: string
+  content: string
+}): void {
+  const blob = new Blob([payload.content], { type: payload.mimeType })
+  downloadBlob(payload.filename, blob)
+}
+
+export function exportReportFromServerPayload(
+  format: 'csv' | 'excel' | 'pdf',
+  payload: {
+    filename: string
+    mimeType: string
+    content: string
+    reportData?: ReportExportData
+  },
+): void {
+  if (format === 'pdf') {
+    if (!payload.reportData) {
+      throw new Error('Missing report data for PDF export')
+    }
+    exportReportPdf(payload.reportData)
+    return
+  }
+  downloadExportPayload(payload)
+}

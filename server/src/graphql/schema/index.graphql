@@ -73,6 +73,33 @@ type MessagePayload {
   message: String!
 }
 
+enum ExportFormat {
+  csv
+  excel
+  pdf
+}
+
+input ExportContactsInput {
+  search: String
+  dateFrom: String
+  dateTo: String
+}
+
+input ExportReportInput {
+  format: ExportFormat!
+  period: String!
+  dateFrom: String!
+  dateTo: String!
+}
+
+type ExportPayload {
+  filename: String!
+  mimeType: String!
+  content: String!
+  recordCount: Int!
+  reportData: JSON
+}
+
 type Contact {
   id: ID!
   ownerId: ID!
@@ -365,4 +392,6 @@ type Mutation {
   rescheduleFollowUp(id: ID!, scheduledDate: DateTime!): FollowUp!
   grantAccess(input: ShareInput!): SharedAccess!
   revokeAccess(contactId: ID!, sharedUserId: ID!): Boolean!
+  exportContacts(input: ExportContactsInput!): ExportPayload!
+  exportReport(input: ExportReportInput!): ExportPayload!
 }

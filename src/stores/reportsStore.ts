@@ -2,13 +2,14 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { ChartDataPoint, ReportMetrics } from '@/types'
 import { endOfMonth, startOfMonth } from '@/utils/helpers'
-import { exportReport as downloadReport } from '@/utils/reportExport'
+import { exportReportFromServerPayload } from '@/utils/reportExport'
 import {
   reportsService,
   chartHasData,
   type ConversionDetailRow,
   type LeadSourceStat,
 } from '@/services/reports.service'
+import { exportService } from '@/services/export.service'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/composables/useToast'
 
@@ -77,19 +78,46 @@ export const useReportsStore = defineStore('reports', () => {
     }
   }
 
-  function exportReport(format: 'csv' | 'excel' | 'pdf') {
+  async function exportReport(format: 'csv' | 'excel' | 'pdf') {
     const toast = useToast()
-    downloadReport(format, {
-      period: period.value,
-      dateFrom: dateFrom.value,
-      dateTo: dateTo.value,
-      metrics: metrics.value,
-      conversionDetails: conversionDetails.value,
-      leadSources: leadSources.value,
-      mostActiveDay: mostActiveDay.value,
-    })
-    const label = format === 'excel' ? 'Excel' : format.toUpperCase()
-    toast.success('Export complete', `Your ${label} report has been downloaded.`)
+    loading.value = true
+    try {
+      const payload = await exportService.exportReport({
+        format,
+        period: period.value,
+        dateFrom: dateFrom.value,
+        dateTo: dateTo.value,
+      })
+
+      exportReportFromServerPayload(format, {
+        filename: payload.filename,
+        mimeType: payload.mimeType,
+        content: payload.content,
+        reportData: payload.reportData
+          ? {
+              period: payload.reportData.period,
+              dateFrom: payload.reportData.dateFrom,
+              dateTo: payload.reportData.dateTo,
+              metrics: payload.reportData.metrics,
+              conversionDetails: payload.reportData.conversionDetails.map((row) => ({
+                ...row,
+                status: 'new_lead' as const,
+                statusClass: '',
+              })),
+              leadSources: payload.reportData.leadSources,
+              mostActiveDay: payload.reportData.mostActiveDay,
+            }
+          : undefined,
+      })
+
+      const label = format === 'excel' ? 'Excel' : format.toUpperCase()
+      toast.success('Export complete', `Your ${label} report has been downloaded.`)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Export failed'
+      toast.error('Export failed', message)
+    } finally {
+      loading.value = false
+    }
   }
 
   return {

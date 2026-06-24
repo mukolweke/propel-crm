@@ -12,6 +12,7 @@ import { reportService } from '../../modules/reports/report.service.js'
 import { sharingService } from '../../modules/sharing/sharing.service.js'
 import { userService } from '../../modules/users/user.service.js'
 import { auditAdminService } from '../../modules/audit/audit.admin.service.js'
+import { exportService } from '../../modules/export/export.service.js'
 import { User } from '../../models/index.js'
 import { setAuthCookies, clearAuthCookies, getRefreshTokenFromCookies } from '../../utils/auth-cookies.js'
 import { AppError } from '../../utils/errors.js'
@@ -314,6 +315,16 @@ export const resolvers = {
     revokeAccess: async (_: unknown, { contactId, sharedUserId }: { contactId: string; sharedUserId: string }, ctx: GraphQLContext) => {
       const user = requireAppAccess(ctx)
       return sharingService.revokeAccess(user, contactId, sharedUserId)
+    },
+
+    exportContacts: async (_: unknown, { input }: { input: unknown }, ctx: GraphQLContext) => {
+      const user = requireAppAccess(ctx)
+      return exportService.exportContacts(user, input, meta(ctx))
+    },
+
+    exportReport: async (_: unknown, { input }: { input: unknown }, ctx: GraphQLContext) => {
+      const user = requireAppAccess(ctx)
+      return exportService.exportReport(user, input, meta(ctx))
     },
   },
 }

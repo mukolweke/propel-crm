@@ -153,6 +153,24 @@ export const shareInputSchema = z.object({
   permission: z.enum(['view', 'report', 'edit']),
 })
 
+const dateOnlySchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD')
+  .optional()
+
+export const exportContactsSchema = z.object({
+  search: z.string().max(200).optional().transform((v) => (v ? sanitizeString(v, 200) : undefined)),
+  dateFrom: dateOnlySchema,
+  dateTo: dateOnlySchema,
+})
+
+export const exportReportSchema = z.object({
+  format: z.enum(['csv', 'excel', 'pdf']),
+  period: z.enum(['daily', 'monthly']),
+  dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dateFrom must be YYYY-MM-DD'),
+  dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dateTo must be YYYY-MM-DD'),
+})
+
 export const auditLogFilterSchema = z.object({
   action: z.string().optional(),
   entityType: z.string().optional(),
