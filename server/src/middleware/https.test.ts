@@ -79,7 +79,7 @@ describe('createHttpsEnforcer', () => {
     const req = mockRequest({ secure: true })
     let calledNext = false
 
-    enforce(req, { redirect() {} } as Response, () => {
+    enforce(req, { redirect() {} } as unknown as Response, () => {
       calledNext = true
     })
 
@@ -90,7 +90,7 @@ describe('createHttpsEnforcer', () => {
     const enforce = createHttpsEnforcer(false)
     let calledNext = false
 
-    enforce(mockRequest(), { redirect() {} } as Response, () => {
+    enforce(mockRequest(), { redirect() {} } as unknown as Response, () => {
       calledNext = true
     })
 

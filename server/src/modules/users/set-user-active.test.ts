@@ -81,7 +81,6 @@ function postSetUserActive(
 
 describe('setUserActive super admin guard', { skip: !env.MONGODB_URI }, () => {
   let app: Awaited<ReturnType<typeof createApp>>
-  let adminAId: string
   let adminBId: string
   let agentId: string
 
@@ -90,7 +89,7 @@ describe('setUserActive super admin guard', { skip: !env.MONGODB_URI }, () => {
     app = await createApp()
 
     const password = await bcrypt.hash(PASSWORD, BCRYPT_ROUNDS)
-    const [adminA, adminB, agent] = await User.create([
+    const [, adminB, agent] = await User.create([
       {
         fullName: 'Admin A',
         email: ADMIN_A_EMAIL,
@@ -117,7 +116,6 @@ describe('setUserActive super admin guard', { skip: !env.MONGODB_URI }, () => {
       },
     ])
 
-    adminAId = adminA._id.toString()
     adminBId = adminB._id.toString()
     agentId = agent._id.toString()
   })

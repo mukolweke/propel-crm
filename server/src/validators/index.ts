@@ -214,7 +214,7 @@ export const auditLogFilterSchema = z.object({
   pageSize: z.coerce.number().min(1).max(100).default(20),
 })
 
-export function parseInput<T>(schema: z.ZodSchema<T>, data: unknown): T {
+export function parseInput<S extends z.ZodTypeAny>(schema: S, data: unknown): z.output<S> {
   const result = schema.safeParse(data)
   if (!result.success) {
     const message = result.error.errors.map((e) => e.message).join('; ')
