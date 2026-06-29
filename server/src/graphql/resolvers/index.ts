@@ -1,6 +1,4 @@
 import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
 import type { GraphQLContext } from '../../types/index.js'
 import { assertAuthenticated, toGraphQLError } from '../../utils/errors.js'
 import { assertNotMustChangePassword } from '../../middleware/rbac.js'
@@ -17,6 +15,7 @@ import { User } from '../../models/index.js'
 import { setAuthCookies, clearAuthCookies, getRefreshTokenFromCookies } from '../../utils/auth-cookies.js'
 import { AppError } from '../../utils/errors.js'
 import { parseInput, loginSchema } from '../../validators/index.js'
+import { getGraphqlSchemaPath } from '../schema-path.js'
 import { dateTimeScalar, jsonScalar } from '../types/scalars.js'
 import {
   mapUser,
@@ -26,11 +25,7 @@ import {
   mapSharedAccess,
 } from '../types/mappers.js'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const typeDefs = readFileSync(
-    join(__dirname, '../../../graphql/schema/index.graphql'),
-    'utf-8',
-)
+const typeDefs = readFileSync(getGraphqlSchemaPath(), 'utf-8')
 
 function meta(ctx: GraphQLContext) {
   return { ip: ctx.ip, userAgent: ctx.userAgent }

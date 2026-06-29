@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc && mkdir -p dist/graphql/schema && cp src/graphql/schema/index.graphql dist/graphql/schema/index.graphql",
-    "start": "node dist/src/server.js",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-graphql-schema.mjs",
+    "start": "node dist/server.js",
     "seed": "tsx scripts/seed.ts",
     "db:reset": "RESET_DB=yes tsx scripts/seed.ts",
     "db:backfill-contacts": "tsx scripts/backfill-contact-normalized.ts",
