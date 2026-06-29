@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc && cp -r src/graphql/schema dist/graphql/",
-    "start": "node dist/server.js",
+    "start": "node dist/src/server.js",
     "seed": "tsx scripts/seed.ts",
     "db:reset": "RESET_DB=yes tsx scripts/seed.ts",
     "db:backfill-contacts": "tsx scripts/backfill-contact-normalized.ts",
