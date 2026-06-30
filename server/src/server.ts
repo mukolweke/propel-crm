@@ -18,9 +18,11 @@ import { assertValidCsrf } from './middleware/csrf.js'
 import { createGraphqlMutationRateLimitMiddleware } from './middleware/graphql-mutation-rate-limit.js'
 import { enforceHttps } from './middleware/https.js'
 import { requestLoggingMiddleware } from './middleware/request-logging.js'
+import { requestIdMiddleware } from './middleware/request-id.js'
 import { registerProcessHandlers } from './process-handlers.js'
 import { createHealthRouter } from './routes/health.js'
 import { logger } from './utils/logger.js'
+import { logStartupBanner } from './utils/startup-banner.js'
 import { AppError } from './utils/errors.js'
 import type { GraphQLContext } from './types/index.js'
 
@@ -52,8 +54,10 @@ export async function createApp() {
     }),
   )
 
+  // Response compression before route handlers (including GraphQL).
   app.use(compression())
   app.use(cookieParser())
+  app.use(requestIdMiddleware)
   app.use(requestLoggingMiddleware)
 
   const apiLimiter = rateLimit({
@@ -106,7 +110,8 @@ export async function createApp() {
       origin: corsOrigins,
       credentials: true,
       methods: ['GET', 'POST', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'X-CSRF-Token'],
+      allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'X-Request-Id'],
+      exposedHeaders: ['X-Request-Id'],
     }),
     (_req, res, next) => {
       res.set('Cache-Control', 'no-store')
@@ -139,8 +144,8 @@ export async function createApp() {
     }),
   )
 
-  app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    logger.error('Unhandled error', err)
+  app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    logger.error('Unhandled error', err, { path: req.path, method: req.method })
     if (!res.headersSent) {
       res.status(500).json({ error: 'Internal server error' })
     }
@@ -156,6 +161,7 @@ async function bootstrap() {
   const app = await createApp()
 
   httpServerInstance = app.listen(env.PORT, '0.0.0.0', () => {
+    logStartupBanner()
     logger.info('Propel CRM API ready', {
       port: env.PORT,
       environment: env.NODE_ENV,

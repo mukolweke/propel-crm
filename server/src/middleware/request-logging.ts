@@ -11,7 +11,7 @@ export function requestLoggingMiddleware(req: Request, res: Response, next: Next
 
   res.on('finish', () => {
     const durationMs = roundMs(Number(process.hrtime.bigint() - start) / 1e6)
-    const meta: Record<string, unknown> = {
+    const fields: Record<string, unknown> = {
       method: req.method,
       path: req.path,
       status: res.statusCode,
@@ -20,17 +20,17 @@ export function requestLoggingMiddleware(req: Request, res: Response, next: Next
 
     if (req.path === '/graphql') {
       const operation = extractGraphQLOperationName(req.body)
-      if (operation) meta.graphqlOperation = operation
+      if (operation) fields.operation = operation
     }
 
     if (req.path.startsWith('/health')) {
-      logger.info('Request completed', meta)
+      logger.info('Request completed', undefined, fields)
     } else if (res.statusCode >= 500) {
-      logger.error('Request completed', meta)
+      logger.error('Request completed', undefined, fields)
     } else if (res.statusCode >= 400) {
-      logger.warn('Request completed', meta)
+      logger.warn('Request completed', undefined, fields)
     } else {
-      logger.info('Request completed', meta)
+      logger.info('Request completed', undefined, fields)
     }
   })
 
