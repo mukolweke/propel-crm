@@ -1,3 +1,5 @@
+import { getRequestId } from './request-context.js'
+
 type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 
 const SENSITIVE_KEY_PATTERN =
@@ -39,11 +41,23 @@ function redactMeta(value: unknown, depth = 0): unknown {
   return value
 }
 
-function log(level: LogLevel, message: string, meta?: unknown): void {
+function log(
+  level: LogLevel,
+  message: string,
+  meta?: unknown,
+  rootFields?: Record<string, unknown>,
+): void {
   const entry: Record<string, unknown> = {
     level,
     message,
     timestamp: new Date().toISOString(),
+  }
+
+  const requestId = getRequestId()
+  if (requestId) entry.requestId = requestId
+
+  if (rootFields) {
+    Object.assign(entry, redactMeta(rootFields) as Record<string, unknown>)
   }
 
   if (meta !== undefined) {
@@ -55,8 +69,12 @@ function log(level: LogLevel, message: string, meta?: unknown): void {
 }
 
 export const logger = {
-  info: (message: string, meta?: unknown) => log('info', message, meta),
-  warn: (message: string, meta?: unknown) => log('warn', message, meta),
-  error: (message: string, meta?: unknown) => log('error', message, meta),
-  debug: (message: string, meta?: unknown) => log('debug', message, meta),
+  info: (message: string, meta?: unknown, rootFields?: Record<string, unknown>) =>
+    log('info', message, meta, rootFields),
+  warn: (message: string, meta?: unknown, rootFields?: Record<string, unknown>) =>
+    log('warn', message, meta, rootFields),
+  error: (message: string, meta?: unknown, rootFields?: Record<string, unknown>) =>
+    log('error', message, meta, rootFields),
+  debug: (message: string, meta?: unknown, rootFields?: Record<string, unknown>) =>
+    log('debug', message, meta, rootFields),
 }

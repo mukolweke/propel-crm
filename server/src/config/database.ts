@@ -22,3 +22,52 @@ export async function disconnectDatabase(): Promise<void> {
 export function isDatabaseReady(): boolean {
   return mongoose.connection.readyState === mongoose.ConnectionStates.connected
 }
+
+export interface DatabaseReadinessResult {
+  ready: boolean
+  latencyMs: number
+  state: string
+}
+
+function roundMs(durationMs: number): number {
+  return Math.round(durationMs * 100) / 100
+}
+
+function getConnectionStateLabel(): string {
+  const states: Record<number, string> = {
+    [mongoose.ConnectionStates.disconnected]: 'disconnected',
+    [mongoose.ConnectionStates.connected]: 'connected',
+    [mongoose.ConnectionStates.connecting]: 'connecting',
+    [mongoose.ConnectionStates.disconnecting]: 'disconnecting',
+  }
+  return states[mongoose.connection.readyState] ?? 'unknown'
+}
+
+/** Ping MongoDB and measure round-trip latency for readiness probes. */
+export async function checkDatabaseReadiness(): Promise<DatabaseReadinessResult> {
+  const start = process.hrtime.bigint()
+  const state = getConnectionStateLabel()
+
+  if (!isDatabaseReady() || !mongoose.connection.db) {
+    return {
+      ready: false,
+      latencyMs: roundMs(Number(process.hrtime.bigint() - start) / 1e6),
+      state,
+    }
+  }
+
+  try {
+    await mongoose.connection.db.admin().ping()
+    return {
+      ready: true,
+      latencyMs: roundMs(Number(process.hrtime.bigint() - start) / 1e6),
+      state: 'connected',
+    }
+  } catch {
+    return {
+      ready: false,
+      latencyMs: roundMs(Number(process.hrtime.bigint() - start) / 1e6),
+      state: getConnectionStateLabel(),
+    }
+  }
+}
