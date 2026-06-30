@@ -1,5 +1,28 @@
 import type { Request } from 'express'
 
+export function extractGraphQLOperationName(body: unknown): string | undefined {
+  if (!body || typeof body !== 'object') return undefined
+
+  const payload = body as Record<string, unknown>
+  if (typeof payload.operationName === 'string' && payload.operationName.trim()) {
+    return payload.operationName.trim()
+  }
+
+  const query = typeof payload.query === 'string' ? payload.query : ''
+  if (!query) return undefined
+
+  const namedOperation = /^\s*(?:query|mutation|subscription)\s+(\w+)/i.exec(query)
+  if (namedOperation?.[1]) return namedOperation[1]
+
+  const mutations = extractMutationNames(query)
+  if (mutations.length > 0) return mutations[0]
+
+  const queryField = /^\s*query[^{]*\{[^}]*?(\w+)\s*(?:\(|{)/is.exec(query)
+  if (queryField?.[1]) return queryField[1]
+
+  return undefined
+}
+
 export function extractMutationNames(query: string): string[] {
   const names: string[] = []
   const pattern = /\bmutation\b[^{]*\{([^}]+)\}/gis

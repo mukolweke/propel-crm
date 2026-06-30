@@ -14,7 +14,7 @@
     "db:check-user": "tsx scripts/check-user.ts",
     "db:migrate": "tsx scripts/migrate-db.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/utils/normalize.test.ts src/utils/graphql-request.test.ts src/modules/contacts/contact-duplicate.service.test.ts src/modules/contacts/contact-duplicate-exclude.test.ts src/modules/contacts/contact-search.test.ts src/modules/contacts/contact-search-pagination.test.ts src/modules/audit/audit-query.test.ts src/validators/createUserSchema.test.ts src/middleware/auth.middleware.test.ts scripts/seed-config.test.ts src/utils/auth-cookies.test.ts src/middleware/auth-cookie-flow.test.ts src/middleware/mongo-sanitize.test.ts src/middleware/graphql-mutation-rate-limit.test.ts src/middleware/https.test.ts src/middleware/query-scope.test.ts src/middleware/authorization.report.test.ts src/modules/contacts/contact-access-scope.test.ts src/modules/interactions/interaction-contact-delete.test.ts src/modules/auth/auth-password-reset-enumeration.test.ts src/modules/export/export.service.test.ts src/modules/export/export-password.test.ts src/modules/reports/report-access.test.ts src/modules/users/set-user-active.test.ts"
+    "test": "node --import tsx --test src/utils/normalize.test.ts src/utils/graphql-request.test.ts src/routes/health.test.ts src/modules/contacts/contact-duplicate.service.test.ts src/modules/contacts/contact-duplicate-exclude.test.ts src/modules/contacts/contact-search.test.ts src/modules/contacts/contact-search-pagination.test.ts src/modules/audit/audit-query.test.ts src/validators/createUserSchema.test.ts src/middleware/auth.middleware.test.ts scripts/seed-config.test.ts src/utils/auth-cookies.test.ts src/middleware/auth-cookie-flow.test.ts src/middleware/mongo-sanitize.test.ts src/middleware/graphql-mutation-rate-limit.test.ts src/middleware/https.test.ts src/middleware/query-scope.test.ts src/middleware/authorization.report.test.ts src/modules/contacts/contact-access-scope.test.ts src/modules/interactions/interaction-contact-delete.test.ts src/modules/auth/auth-password-reset-enumeration.test.ts src/modules/export/export.service.test.ts src/modules/export/export-password.test.ts src/modules/reports/report-access.test.ts src/modules/users/set-user-active.test.ts"
   },
   "engines": {
     "node": ">=20"
@@ -22,6 +22,7 @@
   "dependencies": {
     "@apollo/server": "^4.11.3",
     "bcryptjs": "^3.0.2",
+    "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/compression": "^1.8.1",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
