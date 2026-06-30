@@ -180,12 +180,12 @@ router.beforeEach(async (to) => {
     return { name: 'change-password' }
   }
 
-  if (to.meta.roles && !canAccessRoute(authStore.user?.role, to.meta.roles)) {
-    return { name: 'forbidden' }
-  }
-
   if (to.name === 'dashboard' && authStore.isSuperAdmin) {
     return { name: 'admin-dashboard' }
+  }
+
+  if (to.meta.roles && !canAccessRoute(authStore.user?.role, to.meta.roles)) {
+    return { name: 'forbidden' }
   }
 
   return true

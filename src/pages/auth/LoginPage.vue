@@ -45,7 +45,11 @@ async function handleSubmit() {
       router.push('/change-password')
       return
     }
-    const redirect = (route.query.redirect as string) || (authStore.isSuperAdmin ? '/admin/dashboard' : '/dashboard')
+    if (authStore.isSuperAdmin) {
+      router.push('/admin/dashboard')
+      return
+    }
+    const redirect = (route.query.redirect as string) || '/dashboard'
     router.push(redirect)
   }
 }

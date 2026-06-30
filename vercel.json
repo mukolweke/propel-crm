@@ -1,0 +1,8 @@
+{
+    "rewrites": [
+      {
+        "source": "/graphql",
+        "destination": "https://propel-crm-api.onrender.com/graphql"
+      }
+    ]
+  }
