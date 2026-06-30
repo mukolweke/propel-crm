@@ -1,5 +1,5 @@
 import { Types } from 'mongoose'
-import { Contact, SharedAccess, User, notDeletedFilter } from '../../models/index.js'
+import { Contact, FollowUp, Interaction, SharedAccess, User, notDeletedFilter } from '../../models/index.js'
 import { AppError } from '../../utils/errors.js'
 import {
   assertCanEdit,
@@ -144,6 +144,12 @@ export const contactService = {
     contact.deletedAt = new Date()
     contact.deletedBy = new Types.ObjectId(user.id)
     await contact.save()
+
+    await Promise.all([
+      Interaction.deleteMany({ contactId: contact._id }),
+      FollowUp.deleteMany({ contactId: contact._id }),
+      SharedAccess.deleteMany({ contactId: contact._id }),
+    ])
 
     await auditService.log({
       action: 'CONTACT_DELETED',

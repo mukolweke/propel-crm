@@ -2,7 +2,7 @@ import { Types } from 'mongoose'
 import { Interaction, FollowUp } from '../../models/index.js'
 import { AppError } from '../../utils/errors.js'
 import { contactService } from '../contacts/contact.service.js'
-import { findInteractionForUser } from '../../middleware/query-scope.js'
+import { findInteractionForUser, getAccessibleActiveContactIds } from '../../middleware/query-scope.js'
 import { isSuperAdmin } from '../../middleware/rbac.js'
 import { parseInput, interactionInputSchema, interactionUpdateSchema } from '../../validators/index.js'
 import { parseObjectId } from '../../utils/objectId.js'
@@ -19,8 +19,10 @@ export const interactionService = {
       return Interaction.find(filter).sort({ createdAt: -1 })
     }
 
-    if (isSuperAdmin(user)) return Interaction.find().sort({ createdAt: -1 })
-    return Interaction.find({ ownerId: user.id }).sort({ createdAt: -1 })
+    const activeContactIds = await getAccessibleActiveContactIds(user)
+    const filter: Record<string, unknown> = { contactId: { $in: activeContactIds } }
+    if (!isSuperAdmin(user)) filter.ownerId = user.id
+    return Interaction.find(filter).sort({ createdAt: -1 })
   },
 
   async interactionHistory(user: AuthUser, contactId: string) {

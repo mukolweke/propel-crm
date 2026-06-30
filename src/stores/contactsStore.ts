@@ -4,6 +4,7 @@ import type { Contact, ContactFilters, ContactFormData, PaginatedResult } from '
 import { isThisWeek, isToday } from '@/utils/helpers'
 import { contactsService } from '@/services/contacts.service'
 import { useAuthStore } from '@/stores/authStore'
+import { useInteractionStore } from '@/stores/interactionStore'
 import { useToast } from '@/composables/useToast'
 
 const defaultFilters = (): ContactFilters => ({
@@ -186,6 +187,7 @@ export const useContactsStore = defineStore('contacts', () => {
 
     await contactsService.deleteContact(id)
     contacts.value = contacts.value.filter((c) => c.id !== id)
+    useInteractionStore().removeInteractionsForContact(id)
   }
 
   return {

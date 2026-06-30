@@ -95,3 +95,17 @@ export async function findFollowUpForUser(
   const filter = buildOwnerEntityFilter(user.id, followUpId, isSuperAdmin(user))
   return FollowUp.findOne(filter)
 }
+
+export async function getAccessibleActiveContactIds(user: AuthUser): Promise<Types.ObjectId[]> {
+  if (isSuperAdmin(user)) {
+    return Contact.find(notDeletedFilter).distinct('_id')
+  }
+
+  const sharedContactIds = await getSharedContactIdsForUser(user.id, 'view')
+  const accessClauses: Record<string, unknown>[] = [{ ownerId: user.id }]
+  if (sharedContactIds.length > 0) {
+    accessClauses.push({ _id: { $in: sharedContactIds } })
+  }
+
+  return Contact.find({ ...notDeletedFilter, $or: accessClauses }).distinct('_id')
+}

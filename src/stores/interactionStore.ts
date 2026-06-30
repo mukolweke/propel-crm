@@ -73,6 +73,10 @@ export const useInteractionStore = defineStore('interactions', () => {
     return interaction
   }
 
+  function removeInteractionsForContact(contactId: string) {
+    interactions.value = interactions.value.filter((i) => i.contactId !== contactId)
+  }
+
   return {
     interactions,
     loading,
@@ -81,5 +85,6 @@ export const useInteractionStore = defineStore('interactions', () => {
     timeline,
     fetchInteractions,
     logInteraction,
+    removeInteractionsForContact,
   }
 })
