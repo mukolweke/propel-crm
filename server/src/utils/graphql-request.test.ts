@@ -1,12 +1,21 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  extractGraphQLOperationName,
   extractMutationEmail,
   extractMutationNames,
   requestHasMutation,
 } from '../utils/graphql-request.js'
 
 describe('graphql-request helpers', () => {
+  it('extracts operation name from body.operationName', () => {
+    const name = extractGraphQLOperationName({
+      operationName: 'GetContacts',
+      query: 'query { contacts { id } }',
+    })
+    assert.equal(name, 'GetContacts')
+  })
+
   it('extracts mutation field names from a GraphQL document', () => {
     const names = extractMutationNames(`
       mutation Login($input: LoginInput!) {

@@ -1,6 +1,8 @@
+import type { Server } from 'node:http'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
+import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import rateLimit from 'express-rate-limit'
 import mongoSanitize from 'express-mongo-sanitize'
@@ -15,8 +17,20 @@ import { buildContext } from './middleware/auth.js'
 import { assertValidCsrf } from './middleware/csrf.js'
 import { createGraphqlMutationRateLimitMiddleware } from './middleware/graphql-mutation-rate-limit.js'
 import { enforceHttps } from './middleware/https.js'
+import { requestLoggingMiddleware } from './middleware/request-logging.js'
+import { registerProcessHandlers } from './process-handlers.js'
+import { createHealthRouter } from './routes/health.js'
 import { logger } from './utils/logger.js'
 import { AppError } from './utils/errors.js'
+import type { GraphQLContext } from './types/index.js'
+
+let apolloServerInstance: ApolloServer<GraphQLContext> | null = null
+let httpServerInstance: Server | null = null
+
+export function getRuntimeServers(): { httpServer: Server; apolloServer: ApolloServer<GraphQLContext> } | null {
+  if (!httpServerInstance || !apolloServerInstance) return null
+  return { httpServer: httpServerInstance, apolloServer: apolloServerInstance }
+}
 
 export async function createApp() {
   const app = express()
@@ -38,7 +52,9 @@ export async function createApp() {
     }),
   )
 
+  app.use(compression())
   app.use(cookieParser())
+  app.use(requestLoggingMiddleware)
 
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
@@ -77,17 +93,25 @@ export async function createApp() {
     },
   })
 
+  apolloServerInstance = server
   await server.start()
 
-  app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', service: 'propel-crm-api', timestamp: new Date().toISOString() })
-  })
+  app.use(createHealthRouter())
 
   app.use('/graphql', apiLimiter)
 
   app.use(
     '/graphql',
-    cors<cors.CorsRequest>({ origin: corsOrigins, credentials: true }),
+    cors<cors.CorsRequest>({
+      origin: corsOrigins,
+      credentials: true,
+      methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'X-CSRF-Token'],
+    }),
+    (_req, res, next) => {
+      res.set('Cache-Control', 'no-store')
+      next()
+    },
     express.json({ limit: '512kb' }),
     mongoSanitize(),
     ...mutationRateLimiters,
@@ -117,18 +141,26 @@ export async function createApp() {
 
   app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     logger.error('Unhandled error', err)
-    res.status(500).json({ error: 'Internal server error' })
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' })
+    }
   })
 
   return app
 }
 
 async function bootstrap() {
+  registerProcessHandlers(getRuntimeServers)
+
   await connectDatabase()
   const app = await createApp()
 
-  app.listen(env.PORT, '0.0.0.0', () => {
-    logger.info(`Propel CRM API ready at http://localhost:${env.PORT}/graphql`)
+  httpServerInstance = app.listen(env.PORT, '0.0.0.0', () => {
+    logger.info('Propel CRM API ready', {
+      port: env.PORT,
+      environment: env.NODE_ENV,
+      graphqlPath: '/graphql',
+    })
   })
 }
 

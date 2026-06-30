@@ -91,8 +91,9 @@ describe('express-mongo-sanitize middleware', () => {
 describe('graphql health with mongo sanitize', () => {
   it('health endpoint is unaffected', async () => {
     const app = await createApp()
-    const res = await request(app).get('/health').expect(200)
-    assert.equal(res.body.status, 'ok')
+    const res = await request(app).get('/health')
+    assert.ok(res.body.service === 'propel-crm-api')
+    assert.ok(['ok', 'degraded'].includes(res.body.status))
   })
 })
 

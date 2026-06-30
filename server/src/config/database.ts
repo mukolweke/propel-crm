@@ -17,3 +17,8 @@ export async function connectDatabase(): Promise<void> {
 export async function disconnectDatabase(): Promise<void> {
   await mongoose.disconnect()
 }
+
+/** True when Mongoose has an active connection to MongoDB. */
+export function isDatabaseReady(): boolean {
+  return mongoose.connection.readyState === mongoose.ConnectionStates.connected
+}
