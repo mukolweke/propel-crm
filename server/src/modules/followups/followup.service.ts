@@ -2,7 +2,7 @@ import { Types } from 'mongoose'
 import { FollowUp } from '../../models/index.js'
 import { AppError } from '../../utils/errors.js'
 import { contactService } from '../contacts/contact.service.js'
-import { findFollowUpForUser } from '../../middleware/query-scope.js'
+import { findFollowUpForUser, getAccessibleActiveContactIds } from '../../middleware/query-scope.js'
 import { isSuperAdmin } from '../../middleware/rbac.js'
 import { parseInput, followUpInputSchema } from '../../validators/index.js'
 import { startOfDay, endOfDay } from '../../utils/helpers.js'
@@ -19,20 +19,26 @@ function ownerFilter(user: AuthUser): Record<string, unknown> {
   return isSuperAdmin(user) ? {} : { ownerId: user.id }
 }
 
+async function followUpFilter(user: AuthUser, extra: Record<string, unknown> = {}) {
+  const activeContactIds = await getAccessibleActiveContactIds(user)
+  return { ...ownerFilter(user), contactId: { $in: activeContactIds }, ...extra }
+}
+
 export const followUpService = {
   async todayFollowUps(user: AuthUser) {
     await syncOverdueStatus(user)
     const today = new Date()
-    return FollowUp.find({
-      ...ownerFilter(user),
-      scheduledDate: { $gte: startOfDay(today), $lte: endOfDay(today) },
-      status: { $in: ['pending', 'overdue'] },
-    }).sort({ scheduledDate: 1 })
+    return FollowUp.find(
+      await followUpFilter(user, {
+        scheduledDate: { $gte: startOfDay(today), $lte: endOfDay(today) },
+        status: { $in: ['pending', 'overdue'] },
+      }),
+    ).sort({ scheduledDate: 1 })
   },
 
   async overdueFollowUps(user: AuthUser) {
     await syncOverdueStatus(user)
-    return FollowUp.find({ ...ownerFilter(user), status: 'overdue' }).sort({ scheduledDate: 1 })
+    return FollowUp.find(await followUpFilter(user, { status: 'overdue' })).sort({ scheduledDate: 1 })
   },
 
   async upcomingFollowUps(user: AuthUser, days = 7) {
@@ -40,11 +46,12 @@ export const followUpService = {
     const start = endOfDay(new Date())
     const end = new Date()
     end.setDate(end.getDate() + days)
-    return FollowUp.find({
-      ...ownerFilter(user),
-      status: 'pending',
-      scheduledDate: { $gt: start, $lte: endOfDay(end) },
-    }).sort({ scheduledDate: 1 })
+    return FollowUp.find(
+      await followUpFilter(user, {
+        status: 'pending',
+        scheduledDate: { $gt: start, $lte: endOfDay(end) },
+      }),
+    ).sort({ scheduledDate: 1 })
   },
 
   async createFollowUp(
